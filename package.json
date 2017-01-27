@@ -1,0 +1,22 @@
+{
+  "name": "park-finder",
+  "version": "1.0.0",
+  "description": "Find recreation opportunities in Detroit.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/CityOfDetroit/park-finder.git"
+  },
+  "author": "Jimmy McBroom",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/CityOfDetroit/park-finder/issues"
+  },
+  "homepage": "https://github.com/CityOfDetroit/park-finder#readme",
+  "dependencies": {
+    "mapbox-gl": "^0.31.0"
+  }
+}
