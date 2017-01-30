@@ -70,7 +70,7 @@ map.on('load', function() {
   // add the GeoJSON from our ArcServer
   map.addSource('parks', {
     type: 'geojson',
-    data: 'http://gis.detroitmi.gov/arcgis/rest/services/Parks/ParksAndRec/MapServer/0/query?where=1%3D1&text=&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&relationParam=&outFields=*&returnGeometry=true&returnTrueCurves=false&maxAllowableOffset=&geometryPrecision=5&outSR=4326&returnIdsOnly=false&returnCountOnly=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&gdbVersion=&returnDistinctValues=false&resultOffset=&resultRecordCount=&f=geojson'
+    data: 'https://gis.detroitmi.gov/arcgis/rest/services/Parks/ParksAndRec/MapServer/0/query?where=1%3D1&text=&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&relationParam=&outFields=*&returnGeometry=true&returnTrueCurves=false&maxAllowableOffset=&geometryPrecision=5&outSR=4326&returnIdsOnly=false&returnCountOnly=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&gdbVersion=&returnDistinctValues=false&resultOffset=&resultRecordCount=&f=geojson'
   })
 
   // add a fill layer
@@ -170,33 +170,33 @@ map.on('load', function() {
         [flyBbox[2], flyBbox[3]]
       ], { padding: 200, maxZoom: 15.5 });
 
-      // get all the amenities for the park
-      var parkAmenities = [];
-      Object.keys(p.properties).forEach(function(a){
-        if (p.properties[a] == 1) {
-          parkAmenities.push(FILTERS[a]);
-        }
-      });
+    // get all the amenities for the park
+    var parkAmenities = [];
+    Object.keys(p.properties).forEach(function(a){
+      if (p.properties[a] == 1) {
+        parkAmenities.push(FILTERS[a]);
+      }
+    });
 
-      // html for all parks
-      var parkHtml = `
-      <b><span>${p.properties.name}</b></span>
-      <hr>
-      <span><b>Available activities:<br/></b> ${parkAmenities.join(', ')}</span>
+    // html for all parks
+    var parkHtml = `
+    <span>Park name: <b>${p.properties.name}</b></span>
+    <hr>
+    <span><b>Available activities:<br/></b> ${parkAmenities.join(', ')}</span>
+    `
+
+    // if it has a rec center, toss this in there
+    if (p.properties.rec_center_name != 'null') {
+      var recCtrHtml = `
+        <span><b>Recreation Center:</b><br/> ${p.properties.rec_center_name}</span>
+        <span><b>Hours of Operation:</b><br/> ${p.properties.opening_hours}</span>
+        <br/>
       `
-
-      // if it has a rec center, toss this in there
-      if (p.properties.rec_center_name != 'null') {
-        var recCtrHtml = `
-          <span><b>Recreation Center:</b><br/> ${p.properties.rec_center_name}</span>
-          <span><b>Hours of Operation:</b><br/> ${p.properties.opening_hours}</span>
-          <br/>
-        `
-        parkDetails.innerHTML = recCtrHtml + parkHtml;
-      }
-      else {
-        parkDetails.innerHTML = parkHtml;
-      }
+      parkDetails.innerHTML = recCtrHtml + parkHtml;
+    }
+    else {
+      parkDetails.innerHTML = parkHtml;
+    }
   }
 
 
@@ -266,6 +266,9 @@ map.on('load', function() {
               popup.setLngLat(centroid(p.geometry).geometry.coordinates)
                   .setText(p.properties.name + ' (' + p.properties.address + ')')
                   .addTo(map);
+          });
+          park.addEventListener('mouseout', function() {
+              popup.remove();
           });
           // if you click on the entry, we want to fly there and add the details
           park.addEventListener('click', function() {
