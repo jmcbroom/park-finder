@@ -8,11 +8,26 @@
   <link rel="stylesheet" href="style.css">
   <body>
     <div id='map'></div>
-    <div id='filter-picker-container'>
-      <select id='filter-picker' class='filter-picker filter-item'>
-      <option>Pick an activity:</select>
+
+    <!-- container for all controls -->
+    <div id='controls-container'>
+      <div id='title'>Park Finder</div>
+      <div id='filter-picker-container'>
+        <p>Choose an activity from the list:</p>
+        <select id='filter-picker' class='filter-picker'></select>
+        <p>Your selections (click to remove):</p>
+      </div>
+      </span>
+      <p>Parks on the map which match <b>any of</b> your selections:</p>
+      <div id='list-container' class='list-container'>
+      </div>
+      <input type="button" id="reset" value="Reset Map"></input>
+      <input type="button" id="zoomToCity" value="View Entire City"></input>
     </div>
-    <div id='list-container' class='list-container'>
+
+    <!-- container for click-on  -->
+    <div id='detail-container' class='detail-container'>
+
     </div>
     <script src = "./bundle.js"></script>
   </body>

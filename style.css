@@ -5,6 +5,11 @@ body {
 }
 #map { position:absolute; top:0; bottom:0; width:100%; }
 
+#title {
+  font-weight: 700;
+  font: 1.35em/1.6em 'Helvetica Neue', Arial, Helvetica, sans-serif;
+}
+
 .filter-picker {
   font-weight: 600;
   border-radius: 3px;
@@ -14,14 +19,12 @@ body {
 }
 
 #filter-picker-container {
-  position: absolute;
-  padding: 10px;
-  top: 10px;
-  right: 10px;
-  z-index: 1;
-  width: 150px;
+  /*position: absolute;*/
+  /*padding: 10px;*/
+  /*top: 10px;*/
+  /*right: 10px;*/
+  /*z-index: 1;*/
   background-color: rgba(255,255,255,0.95);
-  border: 1px solid rgba(0,0,0,0.2);
   border-radius: 4px;
 }
 
@@ -40,26 +43,54 @@ body {
 
 .filter-item {
   font: 12px/18px 'Helvetica Neue', Arial, Helvetica, sans-serif;
-  background-color: #ddd;
-  padding: 5px;
-  margin: 5px;
-  border: 2px solid rgba(0,0,0,0.25);
-  border-radius: 5px;
   display: block;
+  font-weight: 700;
+  margin-left: .25em;
+  padding-top: .25em;
 }
 
-#list-container {
+.filter-item::before {
+  content: "\2713 ";
+  margin-right: .5em;
+
+}
+
+#controls-container {
   position: absolute;
   padding: 10px;
-  bottom: 25px;
+  bottom: 50px;
+  top: 10px;
   right: 10px;
   z-index: 1;
   width: 240px;
-  height: 160px;
+  height: 90%;
+  background-color: rgba(255,255,255,0.95);
+  border: 1px solid rgba(0,0,0,0.2);
+  border-radius: 4px;
+  overflow-y: hidden;
+}
+
+#controls-container p {
+  font: 12px/18px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+  margin-bottom: 0;
+}
+
+#controls-container input {
+  font-weight: 700;
+  font-size: 1em;
+  display: block;
+  margin-top: 10px;
+}
+
+#list-container {
+  position: relative;
+  height: 350px;
+  width: 240px;
   background-color: rgba(255,255,255,0.95);
   border: 1px solid rgba(0,0,0,0.2);
   border-radius: 4px;
   overflow-y: scroll;
+  margin-top: .5em;
 }
 
 #list-container span {
@@ -67,4 +98,22 @@ body {
   display: block;
   padding: 5px;
   border-bottom: 1px solid black;
+}
+
+#detail-container {
+  position: absolute;
+  padding: 10px;
+  bottom: 25px;
+  left: 10px;
+  z-index: 1;
+  width: 240px;
+  height: 240px;
+  background-color: rgba(255,255,255,0.95);
+  border: 1px solid rgba(0,0,0,0.2);
+  border-radius: 4px;
+  overflow-y: scroll;
+}
+
+#detail-container span {
+  display: block;
 }
