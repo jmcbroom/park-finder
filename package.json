@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/CityOfDetroit/park-finder#readme",
   "dependencies": {
+    "lodash": "^4.17.4",
     "mapbox-gl": "^0.31.0"
   }
 }

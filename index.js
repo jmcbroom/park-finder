@@ -1,6 +1,8 @@
 var mapboxgl = require('mapbox-gl');
+var _ = require('lodash');
+var bbox = require('@turf/bbox')
 
-mapboxgl.accessToken = 'pk.eyJ1Ijoiam1jYnJvb20iLCJhIjoianRuR3B1NCJ9.cePohSx5Od4SJhMVjFuCQA';
+mapboxgl.accessToken = 'pk.eyJ1IjoiY2l0eW9mZGV0cm9pdCIsImEiOiJjaXZvOWhnM3QwMTQzMnRtdWhyYnk5dTFyIn0.FZMFi0-hvA60KYnI-KivWg';
 
 // here are the filters
 var FILTERS = {
@@ -35,7 +37,7 @@ var FILTERS = {
 // make a map objects
 var map = new mapboxgl.Map({
     container: 'map',
-    style: 'mapbox://styles/jmcbroom/cixs0h7mr001m2ro6gbvjgufn',
+    style: 'mapbox://styles/cityofdetroit/cix0w7n08000v2qpb2q15raq1',
     doubleClickZoom: false,
     zoom: 10.7,
     center: [-83.091, 42.350],
@@ -49,7 +51,12 @@ var map = new mapboxgl.Map({
 });
 
 var nav = new mapboxgl.NavigationControl();
-map.addControl(nav, 'top-right');
+map.addControl(nav, 'bottom-left');
+
+var popup = new mapboxgl.Popup({
+    closeButton: false
+});
+
 
 map.on('load', function() {
   map.addSource('parks', {
@@ -66,7 +73,7 @@ map.on('load', function() {
     },
     "paint": {
         "fill-color": "green",
-        "fill-opacity": 0.15
+        "fill-opacity": 0.25
     }
   })
   map.addLayer({
@@ -78,52 +85,122 @@ map.on('load', function() {
       "line-join": "round"
     },
     "paint": {
-        "line-color": "#189ACA",
-        "line-opacity": 0.75,
+        "line-color": "black",
+        "line-opacity": 0.8,
         "line-width": {
             stops: [
                 [8, 0.1],
-                [11, 0.25],
-                [13, 0.75],
-                [22, 2]
+                [11, 0.5],
+                [13, 1.5],
+                [17, 2.5],
+                [22, 4]
             ]
         }
     }
   })
 
   // attach ze filters
-  var filterGroup = document.getElementById('filter-group');
-  Object.keys(FILTERS).forEach(function(f){
-    console.log(FILTERS[f])
-    var input = document.createElement('input');
-    input.type = 'checkbox';
-    input.id = f;
-    input.checked = true;
-    filterGroup.appendChild(input);
+  var filterPicker = document.getElementById('filter-picker');
+  var filterPickerContainer = document.getElementById('filter-picker-container');
+  var parkList = document.getElementById('list-container');
+  var filter = ['any'];
+  var pickedFilters = [];
 
-    var label = document.createElement('label');
-    label.setAttribute('for', f);
-    label.textContent = FILTERS[f];
-    filterGroup.appendChild(label);
-
-    // when you check or uncheck, change the filter.
-    input.addEventListener('change', function(e) {
-      var inputs = document.getElementsByTagName("input");
-      var filter = [
-        "any"
-      ]
-      for(var i = 0; i < inputs.length; i++) {
-          if(inputs[i].type == "checkbox" && inputs[i].checked == true) {
-              filter.push(["==", inputs[i].id, 1])
+  function getUniqueFeatures(array, comparatorProperty) {
+      var existingFeatureKeys = {};
+      // Because features come from tiled vector data, feature geometries may be split
+      // or duplicated across tile boundaries and, as a result, features may appear
+      // multiple times in query results.
+      var uniqueFeatures = array.filter(function(el) {
+          if (existingFeatureKeys[el.properties[comparatorProperty]]) {
+              return false;
+          } else {
+              existingFeatureKeys[el.properties[comparatorProperty]] = true;
+              return true;
           }
-      }
-      map.setFilter('parks-fill', filter);
-      map.setFilter('parks-line', filter);
-      console.log(filter);
-      var parks = map.queryRenderedFeatures({layers: ['parks-fill'], filter: filter});
-      console.log(parks)
-    });
-  })
+      });
 
+      return uniqueFeatures;
+  }
+
+  function listUpdateHandler() {
+    var parks = map.queryRenderedFeatures({
+        layers: ['parks-fill'],
+        filter: filter
+      });
+    while (parkList.firstChild) {
+      parkList.removeChild(parkList.firstChild);
+    }
+    console.log(getUniqueFeatures(parks, 'ogc_fid'))
+    var features = getUniqueFeatures(parks, 'ogc_fid')
+    if (features) {
+      features.forEach(function(p){
+        // console.log(p.geometry.coordinates[0][0])
+        var park = document.createElement('span');
+        park.innerHTML = `<b>${p.properties.name}</b><br /><i>(${p.properties.address})</i>`
+        park.addEventListener('mouseover', function() {
+            console.log(p);
+            console.log(bbox(p.geometry))
+            // Highlight corresponding feature on the map
+            popup.setLngLat(p.geometry.coordinates[0][0])
+                .setText(p.properties.name + ' (' + p.properties.address + ')')
+                .addTo(map);
+        });
+        park.addEventListener('click', function() {
+          var flyBbox = bbox(p.geometry)
+            map.fitBounds([
+              [flyBbox[0], flyBbox[1]],
+              [flyBbox[2], flyBbox[3]]
+            ]);
+        });
+        parkList.appendChild(park)
+      })
+    }
+  }
+
+  function filterUpdateHandler() {
+    filter = ['any']
+    pickedFilters.forEach(function(f){
+      filter.push(['==', f, 1])
+    });
+    map.setFilter('parks-fill', filter);
+    map.setFilter('parks-line', filter);
+  }
+
+  function addFilterHandler(e){
+    var selected = document.createElement('span')
+    selected.textContent = e.target.value + " ";
+    selected.className = "filter-item";
+    selected.onclick = function(){
+      removeFilterHandler(e.target.selectedOptions[0].id)
+      this.parentNode.removeChild(this);
+    }
+    filterPickerContainer.appendChild(selected);
+    pickedFilters.push(e.target.selectedOptions[0].id)
+    filterUpdateHandler();
+    listUpdateHandler();
+  };
+
+  function removeFilterHandler(id){
+    console.log(id)
+    _.remove(pickedFilters, function(d){
+      return d == id;
+    });
+    console.log(pickedFilters)
+    filterUpdateHandler();
+    listUpdateHandler();
+    // setTimeout(function(){ listUpdateHandler() }, 100);
+  };
+
+  filterPicker.addEventListener('change', function(e){ addFilterHandler(e)} );
+
+  map.on('moveend', function() {listUpdateHandler()});
+
+  Object.keys(FILTERS).forEach(function(f){
+    var option = document.createElement('option');
+    option.innerHTML = FILTERS[f];
+    option.id = f;
+    filterPicker.appendChild(option);
+  })
 
 })
