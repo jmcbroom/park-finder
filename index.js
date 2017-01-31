@@ -157,8 +157,8 @@ map.on('load', function() {
               return true;
           }
       });
-
-      return uniqueFeatures;
+      // sort them alphabetically
+      return _.sortBy(uniqueFeatures, [function(f) { return f.properties.name; }]);
   }
 
   // when you click on a park, fly to it and populate the details-container
@@ -181,6 +181,7 @@ map.on('load', function() {
     // html for all parks
     var parkHtml = `
     <span>Park name: <b>${p.properties.name}</b></span>
+    <span>Address: <b>${p.properties.address}</b></span>
     <hr>
     <span><b>Available activities:<br/></b> ${parkAmenities.join(', ')}</span>
     `
