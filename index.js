@@ -1,12 +1,39 @@
+var Slideout = require('slideout');
 var mapboxgl = require('mapbox-gl');
 var _ = require('lodash');
-var bbox = require('@turf/bbox');
 var centroid = require('@turf/centroid');
+var bbox = require('@turf/bbox');
+
+var thisSlideout = new Slideout({
+  'panel': document.getElementById('map-container'),
+  'menu': document.getElementById('menu'),
+  'padding': 300,
+  'tolerance': 70
+});
+
+// Toggle button
+document.querySelector('.toggle-button').addEventListener('click', function() {
+  thisSlideout.toggle();
+});
 
 mapboxgl.accessToken = 'pk.eyJ1IjoiY2l0eW9mZGV0cm9pdCIsImEiOiJjaXZvOWhnM3QwMTQzMnRtdWhyYnk5dTFyIn0.FZMFi0-hvA60KYnI-KivWg';
 
+// make a map object
+var map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/cityofdetroit/cix0w7n08000v2qpb2q15raq1',
+    zoom: 10.7,
+    center: [-83.091, 42.350],
+    // :triangular_ruler:
+    bearing: -1.25,
+    minZoom: 9,
+    maxBounds: [
+        [-83.611, 42.100],
+        [-82.511, 42.600]
+    ]
+});
+
 // lookup object for the filters.
-// these should match columns in the table that are set to 1 or null.
 var FILTERS = {
   "aerobics": "Aerobics",
   "archery": "Archery",
@@ -36,21 +63,6 @@ var FILTERS = {
   "zumba": "Zumba"
 }
 
-// make a map object
-var map = new mapboxgl.Map({
-    container: 'map',
-    style: 'mapbox://styles/cityofdetroit/cix0w7n08000v2qpb2q15raq1',
-    zoom: 10.7,
-    center: [-83.091, 42.350],
-    // :triangular_ruler:
-    bearing: -1.25,
-    minZoom: 9,
-    maxBounds: [
-        [-83.611, 42.100],
-        [-82.511, 42.600]
-    ]
-});
-
 // add nav and geolocation controls to the map
 var nav = new mapboxgl.NavigationControl();
 var geolocate = new mapboxgl.GeolocateControl({
@@ -58,8 +70,8 @@ var geolocate = new mapboxgl.GeolocateControl({
         enableHighAccuracy: true
     }
 });
-map.addControl(nav, 'top-left');
-map.addControl(geolocate, 'top-left');
+map.addControl(nav, 'bottom-right');
+map.addControl(geolocate, 'bottom-right');
 
 var popup = new mapboxgl.Popup({
     closeButton: false
@@ -117,13 +129,13 @@ map.on('load', function() {
   var parkList = document.getElementById('list-container');
   var parkDetails = document.getElementById('detail-container');
 
-  // this button resets everything
-  var resetButton = document.getElementById('reset');
-  resetButton.addEventListener('click', function() {resetMap();});
-
-  // this button zooms out to Detroit
-  var zoomButton = document.getElementById('zoomToCity');
-  zoomButton.addEventListener('click', function() {zoomToCity();});
+  // // this button resets everything
+  // var resetButton = document.getElementById('reset');
+  // resetButton.addEventListener('click', function() {resetMap();});
+  //
+  // // this button zooms out to Detroit
+  // var zoomButton = document.getElementById('zoomToCity');
+  // zoomButton.addEventListener('click', function() {zoomToCity();});
 
   // start with no filter, and no picked filters
   var filter = null;
@@ -164,11 +176,10 @@ map.on('load', function() {
   // when you click on a park, fly to it and populate the details-container
   function clickOnPark(p) {
     // zoom to the park, but not too close
-    var flyBbox = bbox(p.geometry);
-      map.fitBounds([
-        [flyBbox[0], flyBbox[1]],
-        [flyBbox[2], flyBbox[3]]
-      ], { padding: 200, maxZoom: 15.5 });
+    var fb = bbox(p.geometry);
+    var flybox = [[fb[0], fb[1]], [fb[2], fb[3]]]
+    map.fitBounds(flybox, { padding: 50, maxZoom: 17 })
+
 
     // get all the amenities for the park
     var parkAmenities = [];
@@ -197,6 +208,10 @@ map.on('load', function() {
     }
     else {
       parkDetails.innerHTML = parkHtml;
+    };
+
+    if (window.innerWidth < 768) {
+      thisSlideout.open();
     }
   }
 
@@ -256,6 +271,9 @@ map.on('load', function() {
       }
       // get all the unique rendered parks
       var features = getUniqueFeatures(parks, 'ogc_fid')
+      var count = document.getElementById('count');
+      count.innerHTML = features.length;
+
       if (features) {
         // push them to the list-container
         features.forEach(function(p){
@@ -283,6 +301,9 @@ map.on('load', function() {
 
   // fires when a filter is added
   function addFilterHandler(e){
+    if (e.target.value == 'default') {
+      return;
+    }
     var selected = document.createElement('span')
     selected.textContent = e.target.value + " ";
     selected.className = "filter-item";
