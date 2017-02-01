@@ -1,34 +1,51 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-  <title> </title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.29.0/mapbox-gl.js'></script>
-  <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.29.0/mapbox-gl.css' rel='stylesheet' />
-  <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+
+  <head>
+    <meta charset="utf-8">
+    <title>Slideout Demo</title>
+    <meta http-equiv="cleartype" content="on">
+    <meta name="MobileOptimized" content="320">
+    <meta name="HandheldFriendly" content="True">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.29.0/mapbox-gl.css' rel='stylesheet' />
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,600,700" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+  </head>
+
   <body>
-    <div id='map'></div>
 
-    <!-- container for all controls -->
-    <div id='controls-container'>
-      <div id='title'>Park Finder</div>
-      <div id='filter-picker-container'>
-        <p>Choose an activity from the list:</p>
-        <select id='filter-picker' class='filter-picker'></select>
-        <p>Your selections (click to remove):</p>
+    <nav id="menu">
+      <div id="title"><img src="./assets/logo.png" style="float:left;"/><span id="title-text">Parks & Rec Centers</span></div>
+
+      <div id='filter-picker-container' class='panel-container'>
+        <select id='filter-picker' class='filter-picker'>
+          <option value="default">Pick an activity:</option>
+        </select>
       </div>
-      </span>
-      <p>Parks on the map which match <b>any of</b> your selections:</p>
-      <div id='list-container' class='list-container'>
+
+      <p style="text-align:center; margin: 0;">
+        <b><span id="count">0</span></b> park(s)
+        <b>on the map</b> match
+        <b>any of</b> your selected activities:
+      </p>
+
+      <div id='list-container' class='panel-container'>
       </div>
-      <input type="button" id="reset" value="Reset Map"></input>
-      <input type="button" id="zoomToCity" value="View Entire City"></input>
+
+      <div id='detail-container' class='panel-container'>
+      </div>
+
+    </nav>
+
+    <div id="map-container">
+      <button class="toggle-button">☰</button>
+      <div id="map" class="map" data-slideout-ignore>
+      </div>
     </div>
 
-    <!-- container for click-on  -->
-    <div id='detail-container' class='detail-container'>
+    <script src="bundle.js"></script>
 
-    </div>
-    <script src = "./bundle.js"></script>
   </body>
 </html>

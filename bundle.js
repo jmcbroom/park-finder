@@ -1031,15 +1031,42 @@ function hasOwnProperty(obj, prop) {
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"./support/isBuffer":4,"_process":2,"inherits":3}],6:[function(require,module,exports){
+var Slideout = require('slideout');
 var mapboxgl = require('mapbox-gl');
 var _ = require('lodash');
-var bbox = require('@turf/bbox');
 var centroid = require('@turf/centroid');
+var bbox = require('@turf/bbox');
+
+var thisSlideout = new Slideout({
+  'panel': document.getElementById('map-container'),
+  'menu': document.getElementById('menu'),
+  'padding': 300,
+  'tolerance': 70
+});
+
+// Toggle button
+document.querySelector('.toggle-button').addEventListener('click', function() {
+  thisSlideout.toggle();
+});
 
 mapboxgl.accessToken = 'pk.eyJ1IjoiY2l0eW9mZGV0cm9pdCIsImEiOiJjaXZvOWhnM3QwMTQzMnRtdWhyYnk5dTFyIn0.FZMFi0-hvA60KYnI-KivWg';
 
+// make a map object
+var map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/cityofdetroit/cix0w7n08000v2qpb2q15raq1',
+    zoom: 10.7,
+    center: [-83.091, 42.350],
+    // :triangular_ruler:
+    bearing: -1.25,
+    minZoom: 9,
+    maxBounds: [
+        [-83.611, 42.100],
+        [-82.511, 42.600]
+    ]
+});
+
 // lookup object for the filters.
-// these should match columns in the table that are set to 1 or null.
 var FILTERS = {
   "aerobics": "Aerobics",
   "archery": "Archery",
@@ -1069,21 +1096,6 @@ var FILTERS = {
   "zumba": "Zumba"
 }
 
-// make a map object
-var map = new mapboxgl.Map({
-    container: 'map',
-    style: 'mapbox://styles/cityofdetroit/cix0w7n08000v2qpb2q15raq1',
-    zoom: 10.7,
-    center: [-83.091, 42.350],
-    // :triangular_ruler:
-    bearing: -1.25,
-    minZoom: 9,
-    maxBounds: [
-        [-83.611, 42.100],
-        [-82.511, 42.600]
-    ]
-});
-
 // add nav and geolocation controls to the map
 var nav = new mapboxgl.NavigationControl();
 var geolocate = new mapboxgl.GeolocateControl({
@@ -1091,8 +1103,8 @@ var geolocate = new mapboxgl.GeolocateControl({
         enableHighAccuracy: true
     }
 });
-map.addControl(nav, 'top-left');
-map.addControl(geolocate, 'top-left');
+map.addControl(nav, 'bottom-right');
+map.addControl(geolocate, 'bottom-right');
 
 var popup = new mapboxgl.Popup({
     closeButton: false
@@ -1150,13 +1162,13 @@ map.on('load', function() {
   var parkList = document.getElementById('list-container');
   var parkDetails = document.getElementById('detail-container');
 
-  // this button resets everything
-  var resetButton = document.getElementById('reset');
-  resetButton.addEventListener('click', function() {resetMap();});
-
-  // this button zooms out to Detroit
-  var zoomButton = document.getElementById('zoomToCity');
-  zoomButton.addEventListener('click', function() {zoomToCity();});
+  // // this button resets everything
+  // var resetButton = document.getElementById('reset');
+  // resetButton.addEventListener('click', function() {resetMap();});
+  //
+  // // this button zooms out to Detroit
+  // var zoomButton = document.getElementById('zoomToCity');
+  // zoomButton.addEventListener('click', function() {zoomToCity();});
 
   // start with no filter, and no picked filters
   var filter = null;
@@ -1197,11 +1209,10 @@ map.on('load', function() {
   // when you click on a park, fly to it and populate the details-container
   function clickOnPark(p) {
     // zoom to the park, but not too close
-    var flyBbox = bbox(p.geometry);
-      map.fitBounds([
-        [flyBbox[0], flyBbox[1]],
-        [flyBbox[2], flyBbox[3]]
-      ], { padding: 200, maxZoom: 15.5 });
+    var fb = bbox(p.geometry);
+    var flybox = [[fb[0], fb[1]], [fb[2], fb[3]]]
+    map.fitBounds(flybox, { padding: 50, maxZoom: 17 })
+
 
     // get all the amenities for the park
     var parkAmenities = [];
@@ -1230,6 +1241,10 @@ map.on('load', function() {
     }
     else {
       parkDetails.innerHTML = parkHtml;
+    };
+
+    if (window.innerWidth < 768) {
+      thisSlideout.open();
     }
   }
 
@@ -1289,6 +1304,9 @@ map.on('load', function() {
       }
       // get all the unique rendered parks
       var features = getUniqueFeatures(parks, 'ogc_fid')
+      var count = document.getElementById('count');
+      count.innerHTML = features.length;
+
       if (features) {
         // push them to the list-container
         features.forEach(function(p){
@@ -1316,6 +1334,9 @@ map.on('load', function() {
 
   // fires when a filter is added
   function addFilterHandler(e){
+    if (e.target.value == 'default') {
+      return;
+    }
     var selected = document.createElement('span')
     selected.textContent = e.target.value + " ";
     selected.className = "filter-item";
@@ -1371,7 +1392,7 @@ map.on('load', function() {
   })
 })
 
-},{"@turf/bbox":8,"@turf/centroid":9,"lodash":40,"mapbox-gl":95}],7:[function(require,module,exports){
+},{"@turf/bbox":9,"@turf/centroid":10,"lodash":43,"mapbox-gl":98,"slideout":213}],7:[function(require,module,exports){
 (function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
     typeof define === 'function' && define.amd ? define(factory) :
@@ -1886,6 +1907,113 @@ return mapboxBuild;
 })));
 
 },{}],8:[function(require,module,exports){
+/*
+ * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+ * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Ported from Webkit
+ * http://svn.webkit.org/repository/webkit/trunk/Source/WebCore/platform/graphics/UnitBezier.h
+ */
+
+module.exports = UnitBezier;
+
+function UnitBezier(p1x, p1y, p2x, p2y) {
+    // Calculate the polynomial coefficients, implicit first and last control points are (0,0) and (1,1).
+    this.cx = 3.0 * p1x;
+    this.bx = 3.0 * (p2x - p1x) - this.cx;
+    this.ax = 1.0 - this.cx - this.bx;
+
+    this.cy = 3.0 * p1y;
+    this.by = 3.0 * (p2y - p1y) - this.cy;
+    this.ay = 1.0 - this.cy - this.by;
+
+    this.p1x = p1x;
+    this.p1y = p2y;
+    this.p2x = p2x;
+    this.p2y = p2y;
+}
+
+UnitBezier.prototype.sampleCurveX = function(t) {
+    // `ax t^3 + bx t^2 + cx t' expanded using Horner's rule.
+    return ((this.ax * t + this.bx) * t + this.cx) * t;
+};
+
+UnitBezier.prototype.sampleCurveY = function(t) {
+    return ((this.ay * t + this.by) * t + this.cy) * t;
+};
+
+UnitBezier.prototype.sampleCurveDerivativeX = function(t) {
+    return (3.0 * this.ax * t + 2.0 * this.bx) * t + this.cx;
+};
+
+UnitBezier.prototype.solveCurveX = function(x, epsilon) {
+    if (typeof epsilon === 'undefined') epsilon = 1e-6;
+
+    var t0, t1, t2, x2, i;
+
+    // First try a few iterations of Newton's method -- normally very fast.
+    for (t2 = x, i = 0; i < 8; i++) {
+
+        x2 = this.sampleCurveX(t2) - x;
+        if (Math.abs(x2) < epsilon) return t2;
+
+        var d2 = this.sampleCurveDerivativeX(t2);
+        if (Math.abs(d2) < 1e-6) break;
+
+        t2 = t2 - x2 / d2;
+    }
+
+    // Fall back to the bisection method for reliability.
+    t0 = 0.0;
+    t1 = 1.0;
+    t2 = x;
+
+    if (t2 < t0) return t0;
+    if (t2 > t1) return t1;
+
+    while (t0 < t1) {
+
+        x2 = this.sampleCurveX(t2);
+        if (Math.abs(x2 - x) < epsilon) return t2;
+
+        if (x > x2) {
+            t0 = t2;
+        } else {
+            t1 = t2;
+        }
+
+        t2 = (t1 - t0) * 0.5 + t0;
+    }
+
+    // Failure.
+    return t2;
+};
+
+UnitBezier.prototype.solve = function(x, epsilon) {
+    return this.sampleCurveY(this.solveCurveX(x, epsilon));
+};
+
+},{}],9:[function(require,module,exports){
 var each = require('@turf/meta').coordEach;
 
 /**
@@ -1921,7 +2049,7 @@ module.exports = function (geojson) {
     return bbox;
 };
 
-},{"@turf/meta":11}],9:[function(require,module,exports){
+},{"@turf/meta":12}],10:[function(require,module,exports){
 var each = require('@turf/meta').coordEach;
 var point = require('@turf/helpers').point;
 
@@ -1969,7 +2097,7 @@ module.exports = function (features) {
     return point([xSum / len, ySum / len]);
 };
 
-},{"@turf/helpers":10,"@turf/meta":11}],10:[function(require,module,exports){
+},{"@turf/helpers":11,"@turf/meta":12}],11:[function(require,module,exports){
 /**
  * Wraps a GeoJSON {@link Geometry} in a GeoJSON {@link Feature}.
  *
@@ -2295,7 +2423,7 @@ module.exports.distanceToDegrees = function (distance, units) {
     return (distance / factor) * 57.2958;
 };
 
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 /**
  * Iterate over coordinates in any GeoJSON object, similar to
  * Array.forEach.
@@ -2561,7 +2689,7 @@ function geomEach(layer, callback) {
 }
 module.exports.geomEach = geomEach;
 
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 // (c) Dean McNamee <dean@gmail.com>, 2012.
 //
 // https://github.com/deanm/css-color-parser-js
@@ -2764,7 +2892,49 @@ function parseCSSColor(css_str) {
 
 try { exports.parseCSSColor = parseCSSColor } catch(e) { }
 
-},{}],13:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
+'use strict';
+
+var requestAnimFrame = (function() {
+  return window.requestAnimationFrame ||
+    window.webkitRequestAnimationFrame ||
+    function (callback) {
+      window.setTimeout(callback, 1000 / 60);
+    };
+}());
+
+function decouple(node, event, fn) {
+  var eve,
+      tracking = false;
+
+  function captureEvent(e) {
+    eve = e;
+    track();
+  }
+
+  function track() {
+    if (!tracking) {
+      requestAnimFrame(update);
+      tracking = true;
+    }
+  }
+
+  function update() {
+    fn.call(node, eve);
+    tracking = false;
+  }
+
+  node.addEventListener(event, captureEvent, false);
+
+  return captureEvent;
+}
+
+/**
+ * Expose decouple
+ */
+module.exports = decouple;
+
+},{}],15:[function(require,module,exports){
 'use strict';
 
 module.exports = earcut;
@@ -3410,7 +3580,161 @@ earcut.flatten = function (data) {
     return result;
 };
 
-},{}],14:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
+"use strict";
+
+var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } };
+
+exports.__esModule = true;
+/**
+ * Creates a new instance of Emitter.
+ * @class
+ * @returns {Object} Returns a new instance of Emitter.
+ * @example
+ * // Creates a new instance of Emitter.
+ * var Emitter = require('emitter');
+ *
+ * var emitter = new Emitter();
+ */
+
+var Emitter = (function () {
+  function Emitter() {
+    _classCallCheck(this, Emitter);
+  }
+
+  /**
+   * Adds a listener to the collection for the specified event.
+   * @memberof! Emitter.prototype
+   * @function
+   * @param {String} event - The event name.
+   * @param {Function} listener - A listener function to add.
+   * @returns {Object} Returns an instance of Emitter.
+   * @example
+   * // Add an event listener to "foo" event.
+   * emitter.on('foo', listener);
+   */
+
+  Emitter.prototype.on = function on(event, listener) {
+    // Use the current collection or create it.
+    this._eventCollection = this._eventCollection || {};
+
+    // Use the current collection of an event or create it.
+    this._eventCollection[event] = this._eventCollection[event] || [];
+
+    // Appends the listener into the collection of the given event
+    this._eventCollection[event].push(listener);
+
+    return this;
+  };
+
+  /**
+   * Adds a listener to the collection for the specified event that will be called only once.
+   * @memberof! Emitter.prototype
+   * @function
+   * @param {String} event - The event name.
+   * @param {Function} listener - A listener function to add.
+   * @returns {Object} Returns an instance of Emitter.
+   * @example
+   * // Will add an event handler to "foo" event once.
+   * emitter.once('foo', listener);
+   */
+
+  Emitter.prototype.once = function once(event, listener) {
+    var self = this;
+
+    function fn() {
+      self.off(event, fn);
+      listener.apply(this, arguments);
+    }
+
+    fn.listener = listener;
+
+    this.on(event, fn);
+
+    return this;
+  };
+
+  /**
+   * Removes a listener from the collection for the specified event.
+   * @memberof! Emitter.prototype
+   * @function
+   * @param {String} event - The event name.
+   * @param {Function} listener - A listener function to remove.
+   * @returns {Object} Returns an instance of Emitter.
+   * @example
+   * // Remove a given listener.
+   * emitter.off('foo', listener);
+   */
+
+  Emitter.prototype.off = function off(event, listener) {
+
+    var listeners = undefined;
+
+    // Defines listeners value.
+    if (!this._eventCollection || !(listeners = this._eventCollection[event])) {
+      return this;
+    }
+
+    listeners.forEach(function (fn, i) {
+      if (fn === listener || fn.listener === listener) {
+        // Removes the given listener.
+        listeners.splice(i, 1);
+      }
+    });
+
+    // Removes an empty event collection.
+    if (listeners.length === 0) {
+      delete this._eventCollection[event];
+    }
+
+    return this;
+  };
+
+  /**
+   * Execute each item in the listener collection in order with the specified data.
+   * @memberof! Emitter.prototype
+   * @function
+   * @param {String} event - The name of the event you want to emit.
+   * @param {...Object} data - Data to pass to the listeners.
+   * @returns {Object} Returns an instance of Emitter.
+   * @example
+   * // Emits the "foo" event with 'param1' and 'param2' as arguments.
+   * emitter.emit('foo', 'param1', 'param2');
+   */
+
+  Emitter.prototype.emit = function emit(event) {
+    var _this = this;
+
+    for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+      args[_key - 1] = arguments[_key];
+    }
+
+    var listeners = undefined;
+
+    // Defines listeners value.
+    if (!this._eventCollection || !(listeners = this._eventCollection[event])) {
+      return this;
+    }
+
+    // Clone listeners
+    listeners = listeners.slice(0);
+
+    listeners.forEach(function (fn) {
+      return fn.apply(_this, args);
+    });
+
+    return this;
+  };
+
+  return Emitter;
+})();
+
+/**
+ * Exports Emitter
+ */
+exports["default"] = Emitter;
+module.exports = exports["default"];
+},{}],17:[function(require,module,exports){
 var toString = {}.toString,
 	isArray = Array.isArray || function(obj){
 		return toString.call(obj) === "[object Array]";
@@ -3505,7 +3829,7 @@ function sss(val) {
 	}
 }
 
-},{}],15:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 'use strict';
 
 module.exports = createFilter;
@@ -3589,7 +3913,7 @@ function compare(a, b) {
     return a < b ? -1 : a > b ? 1 : 0;
 }
 
-},{}],16:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 var wgs84 = require('wgs84');
 
 module.exports.geometry = geometry;
@@ -3655,7 +3979,7 @@ function rad(_) {
     return _ * Math.PI / 180;
 }
 
-},{"wgs84":219}],17:[function(require,module,exports){
+},{"wgs84":224}],20:[function(require,module,exports){
 var geojsonArea = require('geojson-area');
 
 module.exports = rewind;
@@ -3706,7 +4030,7 @@ function cw(_) {
     return geojsonArea.ring(_) >= 0;
 }
 
-},{"geojson-area":16}],18:[function(require,module,exports){
+},{"geojson-area":19}],21:[function(require,module,exports){
 'use strict';
 
 module.exports = clip;
@@ -3857,7 +4181,7 @@ function newSlice(slices, slice, area, dist, outer) {
     return [];
 }
 
-},{"./feature":20}],19:[function(require,module,exports){
+},{"./feature":23}],22:[function(require,module,exports){
 'use strict';
 
 module.exports = convert;
@@ -3980,7 +4304,7 @@ function calcSize(points) {
     points.dist = dist;
 }
 
-},{"./feature":20,"./simplify":22}],20:[function(require,module,exports){
+},{"./feature":23,"./simplify":25}],23:[function(require,module,exports){
 'use strict';
 
 module.exports = createFeature;
@@ -4025,7 +4349,7 @@ function calcRingBBox(min, max, points) {
     }
 }
 
-},{}],21:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 'use strict';
 
 module.exports = geojsonvt;
@@ -4269,7 +4593,7 @@ function isClippedSquare(tile, extent, buffer) {
     return true;
 }
 
-},{"./clip":18,"./convert":19,"./tile":23,"./transform":24,"./wrap":25}],22:[function(require,module,exports){
+},{"./clip":21,"./convert":22,"./tile":26,"./transform":27,"./wrap":28}],25:[function(require,module,exports){
 'use strict';
 
 module.exports = simplify;
@@ -4345,7 +4669,7 @@ function getSqSegDist(p, a, b) {
     return dx * dx + dy * dy;
 }
 
-},{}],23:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 'use strict';
 
 module.exports = createTile;
@@ -4453,7 +4777,7 @@ function signedArea(ring) {
     return sum;
 }
 
-},{}],24:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 'use strict';
 
 exports.tile = transformTile;
@@ -4496,7 +4820,7 @@ function transformPoint(p, extent, z2, tx, ty) {
     return [x, y];
 }
 
-},{}],25:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 'use strict';
 
 var clip = require('./clip');
@@ -4554,7 +4878,7 @@ function shiftCoords(points, offset) {
     return newPoints;
 }
 
-},{"./clip":18,"./feature":20}],26:[function(require,module,exports){
+},{"./clip":21,"./feature":23}],29:[function(require,module,exports){
 'use strict';
 
 module.exports = GridIndex;
@@ -4716,7 +5040,7 @@ GridIndex.prototype.toArrayBuffer = function() {
     return array.buffer;
 };
 
-},{}],27:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = nBytes * 8 - mLen - 1
@@ -4802,7 +5126,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],28:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 'use strict';
 
 var sort = require('./sort');
@@ -4848,7 +5172,7 @@ KDBush.prototype = {
 function defaultGetX(p) { return p[0]; }
 function defaultGetY(p) { return p[1]; }
 
-},{"./range":29,"./sort":30,"./within":31}],29:[function(require,module,exports){
+},{"./range":32,"./sort":33,"./within":34}],32:[function(require,module,exports){
 'use strict';
 
 module.exports = range;
@@ -4896,7 +5220,7 @@ function range(ids, coords, minX, minY, maxX, maxY, nodeSize) {
     return result;
 }
 
-},{}],30:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 'use strict';
 
 module.exports = sortKD;
@@ -4964,7 +5288,7 @@ function swap(arr, i, j) {
     arr[j] = tmp;
 }
 
-},{}],31:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 'use strict';
 
 module.exports = within;
@@ -5016,7 +5340,7 @@ function sqDist(ax, ay, bx, by) {
     return dx * dx + dy * dy;
 }
 
-},{}],32:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 /**
  * lodash 3.0.7 (Custom Build) <https://lodash.com/>
  * Build: `lodash modern modularize exports="npm" -o ./`
@@ -5360,7 +5684,7 @@ function isObject(value) {
 
 module.exports = baseIsEqual;
 
-},{"lodash.isarray":36,"lodash.istypedarray":38,"lodash.keys":39}],33:[function(require,module,exports){
+},{"lodash.isarray":39,"lodash.istypedarray":41,"lodash.keys":42}],36:[function(require,module,exports){
 /**
  * lodash 3.0.1 (Custom Build) <https://lodash.com/>
  * Build: `lodash modern modularize exports="npm" -o ./`
@@ -5427,7 +5751,7 @@ function identity(value) {
 
 module.exports = bindCallback;
 
-},{}],34:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 /**
  * lodash 3.9.1 (Custom Build) <https://lodash.com/>
  * Build: `lodash modern modularize exports="npm" -o ./`
@@ -5566,7 +5890,7 @@ function isNative(value) {
 
 module.exports = getNative;
 
-},{}],35:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 /**
  * lodash (Custom Build) <https://lodash.com/>
  * Build: `lodash modularize exports="npm" -o ./`
@@ -5797,7 +6121,7 @@ function isObjectLike(value) {
 
 module.exports = isArguments;
 
-},{}],36:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 /**
  * lodash 3.0.4 (Custom Build) <https://lodash.com/>
  * Build: `lodash modern modularize exports="npm" -o ./`
@@ -5979,7 +6303,7 @@ function isNative(value) {
 
 module.exports = isArray;
 
-},{}],37:[function(require,module,exports){
+},{}],40:[function(require,module,exports){
 /**
  * lodash 3.0.4 (Custom Build) <https://lodash.com/>
  * Build: `lodash modern modularize exports="npm" -o ./`
@@ -6043,7 +6367,7 @@ function isEqual(value, other, customizer, thisArg) {
 
 module.exports = isEqual;
 
-},{"lodash._baseisequal":32,"lodash._bindcallback":33}],38:[function(require,module,exports){
+},{"lodash._baseisequal":35,"lodash._bindcallback":36}],41:[function(require,module,exports){
 /**
  * lodash 3.0.6 (Custom Build) <https://lodash.com/>
  * Build: `lodash modularize exports="npm" -o ./`
@@ -6193,7 +6517,7 @@ function isTypedArray(value) {
 
 module.exports = isTypedArray;
 
-},{}],39:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 /**
  * lodash 3.1.2 (Custom Build) <https://lodash.com/>
  * Build: `lodash modern modularize exports="npm" -o ./`
@@ -6431,7 +6755,7 @@ function keysIn(object) {
 
 module.exports = keys;
 
-},{"lodash._getnative":34,"lodash.isarguments":35,"lodash.isarray":36}],40:[function(require,module,exports){
+},{"lodash._getnative":37,"lodash.isarguments":38,"lodash.isarray":39}],43:[function(require,module,exports){
 (function (global){
 /**
  * @license
@@ -23519,7 +23843,7 @@ module.exports = keys;
 }.call(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],41:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 // Constants
 var Kn = 18,
     Xn = 0.950470, // D65 standard referent
@@ -23619,7 +23943,7 @@ module.exports ={
   }
 };
 
-},{}],42:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 'use strict';
 
 var colorSpaces = require('./color_spaces');
@@ -23681,15 +24005,6 @@ function createFunction(parameters, defaultType) {
             outputFunction = identityFunction;
         }
 
-
-        // For categorical functions, generate an Object as a hashmap of the stops for fast searching
-        if (innerFun === evaluateCategoricalFunction) {
-          var hashedStops = Object.create(null);
-          for (var i = 0; i < parameters.stops.length; i++) {
-            hashedStops[parameters.stops[i][0]] = parameters.stops[i][1];
-          }
-        }
-
         if (zoomAndFeatureDependent) {
             var featureFunctions = {};
             var featureFunctionStops = [];
@@ -23720,19 +24035,13 @@ function createFunction(parameters, defaultType) {
 
         } else if (zoomDependent) {
             fun = function(zoom) {
-                if (innerFun === evaluateCategoricalFunction) {
-                  return outputFunction(innerFun(parameters, zoom, hashedStops));
-                }
-                else return outputFunction(innerFun(parameters, zoom));
+                return outputFunction(innerFun(parameters, zoom));
             };
             fun.isFeatureConstant = true;
             fun.isZoomConstant = false;
         } else {
             fun = function(zoom, feature) {
-                if (innerFun === evaluateCategoricalFunction) {
-                  return outputFunction(innerFun(parameters, feature[parameters.property], hashedStops));
-                }
-                else return outputFunction(
+                return outputFunction(
                   innerFun(parameters, feature[parameters.property]));
             };
             fun.isFeatureConstant = false;
@@ -23743,77 +24052,54 @@ function createFunction(parameters, defaultType) {
     return fun;
 }
 
-function evaluateCategoricalFunction(parameters, input, hashedStops) {
-    var value = hashedStops[input];
-    if (value === undefined) {
-      // If the input is not found, return the first value from the original array by default
-      return parameters.stops[0][1];
+function evaluateCategoricalFunction(parameters, input) {
+    for (var i = 0; i < parameters.stops.length; i++) {
+        if (input === parameters.stops[i][0]) {
+            return parameters.stops[i][1];
+        }
     }
-
-    return value;
+    return parameters.stops[0][1];
 }
 
 function evaluateIntervalFunction(parameters, input) {
-    // Edge cases
-    var n = parameters.stops.length;
-    if (n === 1) return parameters.stops[0][1];
-    if (input === undefined || input === null) return parameters.stops[n - 1][1];
-    if (input <= parameters.stops[0][0]) return parameters.stops[0][1];
-    if (input >= parameters.stops[n - 1][0]) return parameters.stops[n - 1][1];
-
-    var index = binarySearchForIndex(parameters.stops, input);
-
-    return parameters.stops[index][1];
+    for (var i = 0; i < parameters.stops.length; i++) {
+        if (input < parameters.stops[i][0]) break;
+    }
+    return parameters.stops[Math.max(i - 1, 0)][1];
 }
 
 function evaluateExponentialFunction(parameters, input) {
     var base = parameters.base !== undefined ? parameters.base : 1;
 
-    // Edge cases
-    var n = parameters.stops.length;
-    if (n === 1) return parameters.stops[0][1];
-    if (input === undefined || input === null) return parameters.stops[n - 1][1];
-    if (input <= parameters.stops[0][0]) return parameters.stops[0][1];
-    if (input >= parameters.stops[n - 1][0]) return parameters.stops[n - 1][1];
+    var i = 0;
+    while (true) {
+        if (i >= parameters.stops.length) break;
+        else if (input <= parameters.stops[i][0]) break;
+        else i++;
+    }
 
-    var index = binarySearchForIndex(parameters.stops, input);
+    if (i === 0) {
+        return parameters.stops[i][1];
 
-    return interpolate(
+    } else if (i === parameters.stops.length) {
+        return parameters.stops[i - 1][1];
+
+    } else {
+        return interpolate(
             input,
             base,
-            parameters.stops[index][0],
-            parameters.stops[index + 1][0],
-            parameters.stops[index][1],
-            parameters.stops[index + 1][1]
-    );
+            parameters.stops[i - 1][0],
+            parameters.stops[i][0],
+            parameters.stops[i - 1][1],
+            parameters.stops[i][1]
+        );
+    }
 }
 
 function evaluateIdentityFunction(parameters, input) {
     return input;
 }
 
-function binarySearchForIndex(stops, input) {
-  var n = stops.length;
-  var lowerIndex = 0;
-  var upperIndex = n - 1;
-  var currentIndex = 0;
-  var currentValue, upperValue;
-
-  while (lowerIndex <= upperIndex) {
-    currentIndex = Math.floor((lowerIndex + upperIndex) / 2);
-    currentValue = stops[currentIndex][0];
-    upperValue = stops[currentIndex + 1][0];
-    if (input >= currentValue && input < upperValue) { // Search complete
-      return currentIndex;
-    } else if (currentValue < input) {
-      lowerIndex = currentIndex + 1;
-    } else if (currentValue > input) {
-      upperIndex = currentIndex - 1;
-    }
-  }
-
-  return Math.max(currentIndex - 1, 0);
-}
 
 function interpolate(input, base, inputLower, inputUpper, outputLower, outputUpper) {
     if (typeof outputLower === 'function') {
@@ -23866,7 +24152,7 @@ module.exports['piecewise-constant'] = function(parameters) {
     return createFunction(parameters, 'interval');
 };
 
-},{"./color_spaces":41}],43:[function(require,module,exports){
+},{"./color_spaces":44}],46:[function(require,module,exports){
 'use strict';
 
 var refProperties = require('./util/ref_properties');
@@ -23920,7 +24206,7 @@ function derefLayers(layers) {
     return layers;
 }
 
-},{"./util/ref_properties":49}],44:[function(require,module,exports){
+},{"./util/ref_properties":52}],47:[function(require,module,exports){
 'use strict';
 
 var isEqual = require('lodash.isequal');
@@ -24279,7 +24565,7 @@ function diffStyles(before, after) {
 module.exports = diffStyles;
 module.exports.operations = operations;
 
-},{"lodash.isequal":37}],45:[function(require,module,exports){
+},{"lodash.isequal":40}],48:[function(require,module,exports){
 'use strict';
 
 var format = require('util').format;
@@ -24297,7 +24583,7 @@ function ValidationError(key, value /*, message, ...*/) {
 
 module.exports = ValidationError;
 
-},{"util":5}],46:[function(require,module,exports){
+},{"util":5}],49:[function(require,module,exports){
 'use strict';
 
 var refProperties = require('./util/ref_properties');
@@ -24345,7 +24631,7 @@ function groupByLayout(layers) {
     return result;
 }
 
-},{"./util/ref_properties":49,"fast-stable-stringify":14}],47:[function(require,module,exports){
+},{"./util/ref_properties":52,"fast-stable-stringify":17}],50:[function(require,module,exports){
 'use strict';
 
 module.exports = function (output) {
@@ -24358,7 +24644,7 @@ module.exports = function (output) {
     return output;
 };
 
-},{}],48:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 'use strict';
 
 module.exports = function getType(val) {
@@ -24377,12 +24663,12 @@ module.exports = function getType(val) {
     }
 };
 
-},{}],49:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
 'use strict';
 
 module.exports = ['type', 'source', 'source-layer', 'minzoom', 'maxzoom', 'filter', 'layout'];
 
-},{}],50:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 'use strict';
 
 // Turn jsonlint-lines-primitives objects into primitive objects
@@ -24394,7 +24680,7 @@ module.exports = function unbundle(value) {
     }
 };
 
-},{}],51:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 'use strict';
 
 var ValidationError = require('../error/validation_error');
@@ -24462,7 +24748,7 @@ module.exports = function validate(options) {
     }
 };
 
-},{"../error/validation_error":45,"../util/extend":47,"../util/get_type":48,"./validate_array":52,"./validate_boolean":53,"./validate_color":54,"./validate_constants":55,"./validate_enum":56,"./validate_filter":57,"./validate_function":58,"./validate_layer":60,"./validate_light":62,"./validate_number":63,"./validate_object":64,"./validate_source":66,"./validate_string":67}],52:[function(require,module,exports){
+},{"../error/validation_error":48,"../util/extend":50,"../util/get_type":51,"./validate_array":55,"./validate_boolean":56,"./validate_color":57,"./validate_constants":58,"./validate_enum":59,"./validate_filter":60,"./validate_function":61,"./validate_layer":63,"./validate_light":65,"./validate_number":66,"./validate_object":67,"./validate_source":69,"./validate_string":70}],55:[function(require,module,exports){
 'use strict';
 
 var getType = require('../util/get_type');
@@ -24516,7 +24802,7 @@ module.exports = function validateArray(options) {
     return errors;
 };
 
-},{"../error/validation_error":45,"../util/get_type":48,"./validate":51}],53:[function(require,module,exports){
+},{"../error/validation_error":48,"../util/get_type":51,"./validate":54}],56:[function(require,module,exports){
 'use strict';
 
 var getType = require('../util/get_type');
@@ -24534,7 +24820,7 @@ module.exports = function validateBoolean(options) {
     return [];
 };
 
-},{"../error/validation_error":45,"../util/get_type":48}],54:[function(require,module,exports){
+},{"../error/validation_error":48,"../util/get_type":51}],57:[function(require,module,exports){
 'use strict';
 
 var ValidationError = require('../error/validation_error');
@@ -24557,7 +24843,7 @@ module.exports = function validateColor(options) {
     return [];
 };
 
-},{"../error/validation_error":45,"../util/get_type":48,"csscolorparser":12}],55:[function(require,module,exports){
+},{"../error/validation_error":48,"../util/get_type":51,"csscolorparser":13}],58:[function(require,module,exports){
 'use strict';
 
 var ValidationError = require('../error/validation_error');
@@ -24591,7 +24877,7 @@ module.exports = function validateConstants(options) {
 
 };
 
-},{"../error/validation_error":45,"../util/get_type":48}],56:[function(require,module,exports){
+},{"../error/validation_error":48,"../util/get_type":51}],59:[function(require,module,exports){
 'use strict';
 
 var ValidationError = require('../error/validation_error');
@@ -24615,7 +24901,7 @@ module.exports = function validateEnum(options) {
     return errors;
 };
 
-},{"../error/validation_error":45,"../util/unbundle_jsonlint":50}],57:[function(require,module,exports){
+},{"../error/validation_error":48,"../util/unbundle_jsonlint":53}],60:[function(require,module,exports){
 'use strict';
 
 var ValidationError = require('../error/validation_error');
@@ -24720,7 +25006,7 @@ module.exports = function validateFilter(options) {
     return errors;
 };
 
-},{"../error/validation_error":45,"../util/get_type":48,"../util/unbundle_jsonlint":50,"./validate_enum":56}],58:[function(require,module,exports){
+},{"../error/validation_error":48,"../util/get_type":51,"../util/unbundle_jsonlint":53,"./validate_enum":59}],61:[function(require,module,exports){
 'use strict';
 
 var ValidationError = require('../error/validation_error');
@@ -24735,9 +25021,12 @@ module.exports = function validateFunction(options) {
     var functionValueSpec = options.valueSpec;
     var functionType = unbundle(options.value.type);
     var stopKeyType;
+    var stopDomainValues = {};
+    var previousStopDomainValue;
+    var previousStopDomainZoom;
 
-    var isZoomFunction = options.value.property === undefined;
-    var isPropertyFunction = options.value.property !== undefined;
+    var isZoomFunction = functionType !== 'categorical' && options.value.property === undefined;
+    var isPropertyFunction = !isZoomFunction;
     var isZoomAndPropertyFunction =
         getType(options.value.stops) === 'array' &&
         getType(options.value.stops[0]) === 'array' &&
@@ -24756,12 +25045,20 @@ module.exports = function validateFunction(options) {
         errors.push(new ValidationError(options.key, options.value, 'missing required property "stops"'));
     }
 
+    if (functionType === 'exponential' && options.valueSpec['function'] === 'piecewise-constant') {
+        errors.push(new ValidationError(options.key, options.value, 'exponential functions not supported'));
+    }
+
     if (options.styleSpec.$version >= 8) {
        if (isPropertyFunction && !options.valueSpec['property-function']) {
            errors.push(new ValidationError(options.key, options.value, 'property functions not supported'));
        } else if (isZoomFunction && !options.valueSpec['zoom-function']) {
            errors.push(new ValidationError(options.key, options.value, 'zoom functions not supported'));
        }
+    }
+
+    if ((functionType === 'categorical' || isZoomAndPropertyFunction) && options.value.property === undefined) {
+        errors.push(new ValidationError(options.key, options.value, '"property" property is required'));
     }
 
     return errors;
@@ -24813,6 +25110,13 @@ module.exports = function validateFunction(options) {
             if (value[0].value === undefined) {
                 return [new ValidationError(key, value, 'object stop key must have value')];
             }
+            if (previousStopDomainZoom && previousStopDomainZoom > unbundle(value[0].zoom)) {
+                return [new ValidationError(key, value[0].zoom, 'stop zoom values must appear in ascending order')];
+            }
+            if (unbundle(value[0].zoom) !== previousStopDomainZoom) {
+                previousStopDomainZoom = unbundle(value[0].zoom);
+                previousStopDomainValue = undefined;
+            }
             errors = errors.concat(validateObject({
                 key: key + '[0]',
                 value: value[0],
@@ -24822,7 +25126,7 @@ module.exports = function validateFunction(options) {
                 objectElementValidators: { zoom: validateNumber, value: validateStopDomainValue }
             }));
         } else {
-            errors = errors.concat((isZoomFunction ? validateNumber : validateStopDomainValue)({
+            errors = errors.concat(validateStopDomainValue({
                 key: key + '[0]',
                 value: value[0],
                 valueSpec: {},
@@ -24843,12 +25147,6 @@ module.exports = function validateFunction(options) {
             if (functionValueSpec.function === 'piecewise-constant' && value[0] % 1 !== 0) {
                 errors.push(new ValidationError(key + '[0]', value[0], 'zoom level for piecewise-constant functions must be an integer'));
             }
-
-            if (options.arrayIndex !== 0) {
-                if (value[0] < options.array[options.arrayIndex - 1][0]) {
-                    errors.push(new ValidationError(key + '[0]', value[0], 'array stops must appear in ascending order'));
-                }
-            }
         }
 
         return errors;
@@ -24856,6 +25154,7 @@ module.exports = function validateFunction(options) {
 
     function validateStopDomainValue(options) {
         var type = getType(options.value);
+        var value = unbundle(options.value);
 
         if (!stopKeyType) {
             stopKeyType = type;
@@ -24874,12 +25173,28 @@ module.exports = function validateFunction(options) {
             return [new ValidationError(options.key, options.value, 'number expected, %s found', type)];
         }
 
+        if (functionType === 'categorical' && type === 'number' && (!isFinite(value) || Math.floor(value) !== value)) {
+            return [new ValidationError(options.key, options.value, 'integer expected, found %s', value)];
+        }
+
+        if (type === 'number' && previousStopDomainValue !== undefined && value < previousStopDomainValue) {
+            return [new ValidationError(options.key, options.value, 'stop domain values must appear in ascending order')];
+        } else {
+            previousStopDomainValue = value;
+        }
+
+        if (functionType === 'categorical' && value in stopDomainValues) {
+            return [new ValidationError(options.key, options.value, 'stop domain values must be unique')];
+        } else {
+            stopDomainValues[value] = true;
+        }
+
         return [];
     }
 
 };
 
-},{"../error/validation_error":45,"../util/get_type":48,"../util/unbundle_jsonlint":50,"./validate":51,"./validate_array":52,"./validate_number":63,"./validate_object":64}],59:[function(require,module,exports){
+},{"../error/validation_error":48,"../util/get_type":51,"../util/unbundle_jsonlint":53,"./validate":54,"./validate_array":55,"./validate_number":66,"./validate_object":67}],62:[function(require,module,exports){
 'use strict';
 
 var ValidationError = require('../error/validation_error');
@@ -24903,7 +25218,7 @@ module.exports = function(options) {
     return errors;
 };
 
-},{"../error/validation_error":45,"./validate_string":67}],60:[function(require,module,exports){
+},{"../error/validation_error":48,"./validate_string":70}],63:[function(require,module,exports){
 'use strict';
 
 var ValidationError = require('../error/validation_error');
@@ -25019,7 +25334,7 @@ module.exports = function validateLayer(options) {
     return errors;
 };
 
-},{"../error/validation_error":45,"../util/extend":47,"../util/unbundle_jsonlint":50,"./validate_filter":57,"./validate_layout_property":61,"./validate_object":64,"./validate_paint_property":65}],61:[function(require,module,exports){
+},{"../error/validation_error":48,"../util/extend":50,"../util/unbundle_jsonlint":53,"./validate_filter":60,"./validate_layout_property":64,"./validate_object":67,"./validate_paint_property":68}],64:[function(require,module,exports){
 'use strict';
 
 var validate = require('./validate');
@@ -25060,7 +25375,7 @@ module.exports = function validateLayoutProperty(options) {
 
 };
 
-},{"../error/validation_error":45,"./validate":51}],62:[function(require,module,exports){
+},{"../error/validation_error":48,"./validate":54}],65:[function(require,module,exports){
 'use strict';
 
 var ValidationError = require('../error/validation_error');
@@ -25110,7 +25425,7 @@ module.exports = function validateLight(options) {
     return errors;
 };
 
-},{"../error/validation_error":45,"../util/get_type":48,"./validate":51}],63:[function(require,module,exports){
+},{"../error/validation_error":48,"../util/get_type":51,"./validate":54}],66:[function(require,module,exports){
 'use strict';
 
 var getType = require('../util/get_type');
@@ -25137,7 +25452,7 @@ module.exports = function validateNumber(options) {
     return [];
 };
 
-},{"../error/validation_error":45,"../util/get_type":48}],64:[function(require,module,exports){
+},{"../error/validation_error":48,"../util/get_type":51}],67:[function(require,module,exports){
 'use strict';
 
 var ValidationError = require('../error/validation_error');
@@ -25196,7 +25511,7 @@ module.exports = function validateObject(options) {
     return errors;
 };
 
-},{"../error/validation_error":45,"../util/get_type":48,"./validate":51}],65:[function(require,module,exports){
+},{"../error/validation_error":48,"../util/get_type":51,"./validate":54}],68:[function(require,module,exports){
 'use strict';
 
 var validate = require('./validate');
@@ -25238,7 +25553,7 @@ module.exports = function validatePaintProperty(options) {
 
 };
 
-},{"../error/validation_error":45,"./validate":51}],66:[function(require,module,exports){
+},{"../error/validation_error":48,"./validate":54}],69:[function(require,module,exports){
 'use strict';
 
 var ValidationError = require('../error/validation_error');
@@ -25304,18 +25619,27 @@ module.exports = function validateSource(options) {
                 styleSpec: styleSpec
             });
 
+        case 'canvas':
+            return validateObject({
+                key: key,
+                value: value,
+                valueSpec: styleSpec.source_canvas,
+                style: style,
+                styleSpec: styleSpec
+            });
+
         default:
             return validateEnum({
                 key: key + '.type',
                 value: value.type,
-                valueSpec: {values: ['vector', 'raster', 'geojson', 'video', 'image']},
+                valueSpec: {values: ['vector', 'raster', 'geojson', 'video', 'image', 'canvas']},
                 style: style,
                 styleSpec: styleSpec
             });
     }
 };
 
-},{"../error/validation_error":45,"../util/unbundle_jsonlint":50,"./validate_enum":56,"./validate_object":64}],67:[function(require,module,exports){
+},{"../error/validation_error":48,"../util/unbundle_jsonlint":53,"./validate_enum":59,"./validate_object":67}],70:[function(require,module,exports){
 'use strict';
 
 var getType = require('../util/get_type');
@@ -25333,7 +25657,7 @@ module.exports = function validateString(options) {
     return [];
 };
 
-},{"../error/validation_error":45,"../util/get_type":48}],68:[function(require,module,exports){
+},{"../error/validation_error":48,"../util/get_type":51}],71:[function(require,module,exports){
 'use strict';
 
 var validateConstants = require('./validate/validate_constants');
@@ -25407,12 +25731,12 @@ function wrapCleanErrors(inner) {
 
 module.exports = validateStyleMin;
 
-},{"../reference/latest.min":69,"./validate/validate":51,"./validate/validate_constants":55,"./validate/validate_filter":57,"./validate/validate_glyphs_url":59,"./validate/validate_layer":60,"./validate/validate_layout_property":61,"./validate/validate_light":62,"./validate/validate_paint_property":65,"./validate/validate_source":66}],69:[function(require,module,exports){
+},{"../reference/latest.min":72,"./validate/validate":54,"./validate/validate_constants":58,"./validate/validate_filter":60,"./validate/validate_glyphs_url":62,"./validate/validate_layer":63,"./validate/validate_layout_property":64,"./validate/validate_light":65,"./validate/validate_paint_property":68,"./validate/validate_source":69}],72:[function(require,module,exports){
 module.exports = require('./v8.min.json');
 
-},{"./v8.min.json":70}],70:[function(require,module,exports){
-module.exports={"$version":8,"$root":{"version":{"required":true,"type":"enum","values":[8]},"name":{"type":"string"},"metadata":{"type":"*"},"center":{"type":"array","value":"number"},"zoom":{"type":"number"},"bearing":{"type":"number","default":0,"period":360,"units":"degrees"},"pitch":{"type":"number","default":0,"units":"degrees"},"light":{"type":"light"},"sources":{"required":true,"type":"sources"},"sprite":{"type":"string"},"glyphs":{"type":"string"},"transition":{"type":"transition"},"layers":{"required":true,"type":"array","value":"layer"}},"sources":{"*":{"type":"source"}},"source":["source_tile","source_geojson","source_video","source_image"],"source_tile":{"type":{"required":true,"type":"enum","values":{"vector":{},"raster":{}}},"url":{"type":"string"},"tiles":{"type":"array","value":"string"},"minzoom":{"type":"number","default":0},"maxzoom":{"type":"number","default":22},"tileSize":{"type":"number","default":512,"units":"pixels"},"*":{"type":"*"}},"source_geojson":{"type":{"required":true,"type":"enum","values":{"geojson":{}}},"data":{"type":"*"},"maxzoom":{"type":"number","default":18},"buffer":{"type":"number","default":128,"maximum":512,"minimum":0},"tolerance":{"type":"number","default":0.375},"cluster":{"type":"boolean","default":false},"clusterRadius":{"type":"number","default":50,"minimum":0},"clusterMaxZoom":{"type":"number"}},"source_video":{"type":{"required":true,"type":"enum","values":{"video":{}}},"urls":{"required":true,"type":"array","value":"string"},"coordinates":{"required":true,"type":"array","length":4,"value":{"type":"array","length":2,"value":"number"}}},"source_image":{"type":{"required":true,"type":"enum","values":{"image":{}}},"url":{"required":true,"type":"string"},"coordinates":{"required":true,"type":"array","length":4,"value":{"type":"array","length":2,"value":"number"}}},"layer":{"id":{"type":"string","required":true},"type":{"type":"enum","values":{"fill":{},"line":{},"symbol":{},"circle":{},"fill-extrusion":{},"raster":{},"background":{}}},"metadata":{"type":"*"},"ref":{"type":"string"},"source":{"type":"string"},"source-layer":{"type":"string"},"minzoom":{"type":"number","minimum":0,"maximum":24},"maxzoom":{"type":"number","minimum":0,"maximum":24},"filter":{"type":"filter"},"layout":{"type":"layout"},"paint":{"type":"paint"},"paint.*":{"type":"paint"}},"layout":["layout_fill","layout_line","layout_circle","layout_fill-extrusion","layout_symbol","layout_raster","layout_background"],"layout_background":{"visibility":{"type":"enum","function":"piecewise-constant","zoom-function":true,"values":{"visible":{},"none":{}},"default":"visible"}},"layout_fill":{"visibility":{"type":"enum","function":"piecewise-constant","zoom-function":true,"values":{"visible":{},"none":{}},"default":"visible"}},"layout_circle":{"visibility":{"type":"enum","function":"piecewise-constant","zoom-function":true,"values":{"visible":{},"none":{}},"default":"visible"}},"layout_fill-extrusion":{"visibility":{"type":"enum","function":"piecewise-constant","zoom-function":true,"values":{"visible":{},"none":{}},"default":"visible"}},"layout_line":{"line-cap":{"type":"enum","function":"piecewise-constant","zoom-function":true,"property-function":true,"values":{"butt":{},"round":{},"square":{}},"default":"butt"},"line-join":{"type":"enum","function":"piecewise-constant","zoom-function":true,"property-function":true,"values":{"bevel":{},"round":{},"miter":{}},"default":"miter"},"line-miter-limit":{"type":"number","default":2,"function":"interpolated","zoom-function":true,"property-function":true,"requires":[{"line-join":"miter"}]},"line-round-limit":{"type":"number","default":1.05,"function":"interpolated","zoom-function":true,"property-function":true,"requires":[{"line-join":"round"}]},"visibility":{"type":"enum","function":"piecewise-constant","zoom-function":true,"values":{"visible":{},"none":{}},"default":"visible"}},"layout_symbol":{"symbol-placement":{"type":"enum","function":"piecewise-constant","zoom-function":true,"property-function":true,"values":{"point":{},"line":{}},"default":"point"},"symbol-spacing":{"type":"number","default":250,"minimum":1,"function":"interpolated","zoom-function":true,"property-function":true,"units":"pixels","requires":[{"symbol-placement":"line"}]},"symbol-avoid-edges":{"type":"boolean","function":"piecewise-constant","zoom-function":true,"property-function":true,"default":false},"icon-allow-overlap":{"type":"boolean","function":"piecewise-constant","zoom-function":true,"property-function":true,"default":false,"requires":["icon-image"]},"icon-ignore-placement":{"type":"boolean","function":"piecewise-constant","zoom-function":true,"property-function":true,"default":false,"requires":["icon-image"]},"icon-optional":{"type":"boolean","function":"piecewise-constant","zoom-function":true,"property-function":true,"default":false,"requires":["icon-image","text-field"]},"icon-rotation-alignment":{"type":"enum","function":"piecewise-constant","zoom-function":true,"property-function":true,"values":{"map":{},"viewport":{},"auto":{}},"default":"auto","requires":["icon-image"]},"icon-size":{"type":"number","default":1,"minimum":0,"function":"interpolated","zoom-function":true,"property-function":true,"requires":["icon-image"]},"icon-text-fit":{"type":"enum","function":"piecewise-constant","zoom-function":true,"property-function":false,"values":{"none":{},"width":{},"height":{},"both":{}},"default":"none","requires":["icon-image","text-field"]},"icon-text-fit-padding":{"type":"array","value":"number","length":4,"default":[0,0,0,0],"units":"pixels","function":"interpolated","zoom-function":true,"property-function":true,"requires":["icon-image","text-field",{"icon-text-fit":["both","width","height"]}]},"icon-image":{"type":"string","function":"piecewise-constant","zoom-function":true,"property-function":true,"tokens":true},"icon-rotate":{"type":"number","default":0,"period":360,"function":"interpolated","zoom-function":true,"property-function":true,"units":"degrees","requires":["icon-image"]},"icon-padding":{"type":"number","default":2,"minimum":0,"function":"interpolated","zoom-function":true,"property-function":true,"units":"pixels","requires":["icon-image"]},"icon-keep-upright":{"type":"boolean","function":"piecewise-constant","zoom-function":true,"property-function":true,"default":false,"requires":["icon-image",{"icon-rotation-alignment":"map"},{"symbol-placement":"line"}]},"icon-offset":{"type":"array","value":"number","length":2,"default":[0,0],"function":"interpolated","zoom-function":true,"property-function":true,"requires":["icon-image"]},"text-pitch-alignment":{"type":"enum","function":"piecewise-constant","zoom-function":true,"property-function":true,"values":{"map":{},"viewport":{},"auto":{}},"default":"auto","requires":["text-field"]},"text-rotation-alignment":{"type":"enum","function":"piecewise-constant","zoom-function":true,"property-function":true,"values":{"map":{},"viewport":{},"auto":{}},"default":"auto","requires":["text-field"]},"text-field":{"type":"string","function":"piecewise-constant","zoom-function":true,"property-function":true,"default":"","tokens":true},"text-font":{"type":"array","value":"string","function":"piecewise-constant","zoom-function":true,"property-function":true,"default":["Open Sans Regular","Arial Unicode MS Regular"],"requires":["text-field"]},"text-size":{"type":"number","default":16,"minimum":0,"units":"pixels","function":"interpolated","zoom-function":true,"property-function":true,"requires":["text-field"]},"text-max-width":{"type":"number","default":10,"minimum":0,"units":"ems","function":"interpolated","zoom-function":true,"property-function":true,"requires":["text-field"]},"text-line-height":{"type":"number","default":1.2,"units":"ems","function":"interpolated","zoom-function":true,"property-function":true,"requires":["text-field"]},"text-letter-spacing":{"type":"number","default":0,"units":"ems","function":"interpolated","zoom-function":true,"property-function":true,"requires":["text-field"]},"text-justify":{"type":"enum","function":"piecewise-constant","zoom-function":true,"property-function":true,"values":{"left":{},"center":{},"right":{}},"default":"center","requires":["text-field"]},"text-anchor":{"type":"enum","function":"piecewise-constant","zoom-function":true,"property-function":true,"values":{"center":{},"left":{},"right":{},"top":{},"bottom":{},"top-left":{},"top-right":{},"bottom-left":{},"bottom-right":{}},"default":"center","requires":["text-field"]},"text-max-angle":{"type":"number","default":45,"units":"degrees","function":"interpolated","zoom-function":true,"property-function":true,"requires":["text-field",{"symbol-placement":"line"}]},"text-rotate":{"type":"number","default":0,"period":360,"units":"degrees","function":"interpolated","zoom-function":true,"property-function":true,"requires":["text-field"]},"text-padding":{"type":"number","default":2,"minimum":0,"units":"pixels","function":"interpolated","zoom-function":true,"property-function":true,"requires":["text-field"]},"text-keep-upright":{"type":"boolean","function":"piecewise-constant","zoom-function":true,"property-function":true,"default":true,"requires":["text-field",{"text-rotation-alignment":"map"},{"symbol-placement":"line"}]},"text-transform":{"type":"enum","function":"piecewise-constant","zoom-function":true,"property-function":true,"values":{"none":{},"uppercase":{},"lowercase":{}},"default":"none","requires":["text-field"]},"text-offset":{"type":"array","value":"number","units":"ems","function":"interpolated","zoom-function":true,"property-function":true,"length":2,"default":[0,0],"requires":["text-field"]},"text-allow-overlap":{"type":"boolean","function":"piecewise-constant","zoom-function":true,"property-function":true,"default":false,"requires":["text-field"]},"text-ignore-placement":{"type":"boolean","function":"piecewise-constant","zoom-function":true,"property-function":true,"default":false,"requires":["text-field"]},"text-optional":{"type":"boolean","function":"piecewise-constant","zoom-function":true,"property-function":true,"default":false,"requires":["text-field","icon-image"]},"visibility":{"type":"enum","function":"piecewise-constant","zoom-function":true,"values":{"visible":{},"none":{}},"default":"visible"}},"layout_raster":{"visibility":{"type":"enum","function":"piecewise-constant","zoom-function":true,"values":{"visible":{},"none":{}},"default":"visible"}},"filter":{"type":"array","value":"*"},"filter_operator":{"type":"enum","values":{"==":{},"!=":{},">":{},">=":{},"<":{},"<=":{},"in":{},"!in":{},"all":{},"any":{},"none":{},"has":{},"!has":{}}},"geometry_type":{"type":"enum","values":{"Point":{},"LineString":{},"Polygon":{}}},"function":{"stops":{"type":"array","value":"function_stop"},"base":{"type":"number","default":1,"minimum":0},"property":{"type":"string","default":"$zoom"},"type":{"type":"enum","values":{"identity":{},"exponential":{},"interval":{},"categorical":{}},"default":"exponential"},"colorSpace":{"type":"enum","values":{"rgb":{},"lab":{},"hcl":{}},"default":"rgb"}},"function_stop":{"type":"array","minimum":0,"maximum":22,"value":["number","color"],"length":2},"light":{"anchor":{"type":"enum","default":"viewport","values":{"map":{},"viewport":{}},"transition":false},"position":{"type":"array","default":[1.15,210,30],"length":3,"value":"number","transition":true,"function":"interpolated","zoom-function":true,"property-function":false},"color":{"type":"color","default":"#ffffff","function":"interpolated","zoom-function":true,"property-function":false,"transition":true},"intensity":{"type":"number","default":0.5,"minimum":0,"maximum":1,"function":"interpolated","zoom-function":true,"property-function":false,"transition":true}},"paint":["paint_fill","paint_line","paint_circle","paint_fill-extrusion","paint_symbol","paint_raster","paint_background"],"paint_fill":{"fill-antialias":{"type":"boolean","function":"piecewise-constant","zoom-function":true,"property-function":true,"default":true},"fill-opacity":{"type":"number","function":"interpolated","zoom-function":true,"property-function":true,"default":1,"minimum":0,"maximum":1,"transition":true},"fill-color":{"type":"color","default":"#000000","function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"requires":[{"!":"fill-pattern"}]},"fill-outline-color":{"type":"color","function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"requires":[{"!":"fill-pattern"},{"fill-antialias":true}]},"fill-translate":{"type":"array","value":"number","length":2,"default":[0,0],"function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"units":"pixels"},"fill-translate-anchor":{"type":"enum","function":"piecewise-constant","zoom-function":true,"property-function":true,"values":{"map":{},"viewport":{}},"default":"map","requires":["fill-translate"]},"fill-pattern":{"type":"string","function":"piecewise-constant","zoom-function":true,"property-function":true,"transition":true}},"paint_fill-extrusion":{"fill-extrusion-opacity":{"type":"number","function":"interpolated","zoom-function":true,"property-function":false,"default":1,"minimum":0,"maximum":1,"transition":true},"fill-extrusion-color":{"type":"color","default":"#000000","function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"requires":[{"!":"fill-pattern"}]},"fill-extrusion-translate":{"type":"array","value":"number","length":2,"default":[0,0],"function":"interpolated","zoom-function":true,"property-function":false,"transition":true,"units":"pixels"},"fill-extrusion-translate-anchor":{"type":"enum","function":"piecewise-constant","zoom-function":true,"property-function":false,"values":{"map":{},"viewport":{}},"default":"map","requires":["fill-extrusion-translate"]},"fill-extrusion-pattern":{"type":"string","function":"piecewise-constant","zoom-function":true,"property-function":false,"transition":true},"fill-extrusion-height":{"type":"number","function":"interpolated","zoom-function":true,"property-function":true,"default":0,"minimum":0,"units":"meters","transition":true},"fill-extrusion-base":{"type":"number","function":"interpolated","zoom-function":true,"property-function":true,"default":0,"minimum":0,"units":"meters","transition":true,"requires":[{"<=":"fill-extrusion-height"}]}},"paint_line":{"line-opacity":{"type":"number","function":"interpolated","zoom-function":true,"property-function":true,"default":1,"minimum":0,"maximum":1,"transition":true},"line-color":{"type":"color","default":"#000000","function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"requires":[{"!":"line-pattern"}]},"line-translate":{"type":"array","value":"number","length":2,"default":[0,0],"function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"units":"pixels"},"line-translate-anchor":{"type":"enum","function":"piecewise-constant","zoom-function":true,"property-function":true,"values":{"map":{},"viewport":{}},"default":"map","requires":["line-translate"]},"line-width":{"type":"number","default":1,"minimum":0,"function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"units":"pixels"},"line-gap-width":{"type":"number","default":0,"minimum":0,"function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"units":"pixels"},"line-offset":{"type":"number","default":0,"function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"units":"pixels"},"line-blur":{"type":"number","default":0,"minimum":0,"function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"units":"pixels"},"line-dasharray":{"type":"array","value":"number","function":"piecewise-constant","zoom-function":true,"property-function":true,"minimum":0,"transition":true,"units":"line widths","requires":[{"!":"line-pattern"}]},"line-pattern":{"type":"string","function":"piecewise-constant","zoom-function":true,"property-function":true,"transition":true}},"paint_circle":{"circle-radius":{"type":"number","default":5,"minimum":0,"function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"units":"pixels"},"circle-color":{"type":"color","default":"#000000","function":"interpolated","zoom-function":true,"property-function":true,"transition":true},"circle-blur":{"type":"number","default":0,"function":"interpolated","zoom-function":true,"property-function":true,"transition":true},"circle-opacity":{"type":"number","default":1,"minimum":0,"maximum":1,"function":"interpolated","zoom-function":true,"property-function":true,"transition":true},"circle-translate":{"type":"array","value":"number","length":2,"default":[0,0],"function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"units":"pixels"},"circle-translate-anchor":{"type":"enum","function":"piecewise-constant","zoom-function":true,"property-function":true,"values":{"map":{},"viewport":{}},"default":"map","requires":["circle-translate"]},"circle-pitch-scale":{"type":"enum","function":"piecewise-constant","zoom-function":true,"property-function":true,"values":{"map":{},"viewport":{}},"default":"map"},"circle-stroke-width":{"type":"number","default":0,"minimum":0,"function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"units":"pixels"},"circle-stroke-color":{"type":"color","default":"#000000","function":"interpolated","zoom-function":true,"property-function":true,"transition":true},"circle-stroke-opacity":{"type":"number","default":1,"minimum":0,"maximum":1,"function":"interpolated","zoom-function":true,"property-function":true,"transition":true}},"paint_symbol":{"icon-opacity":{"type":"number","default":1,"minimum":0,"maximum":1,"function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"requires":["icon-image"]},"icon-color":{"type":"color","default":"#000000","function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"requires":["icon-image"]},"icon-halo-color":{"type":"color","default":"rgba(0, 0, 0, 0)","function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"requires":["icon-image"]},"icon-halo-width":{"type":"number","default":0,"minimum":0,"function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"units":"pixels","requires":["icon-image"]},"icon-halo-blur":{"type":"number","default":0,"minimum":0,"function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"units":"pixels","requires":["icon-image"]},"icon-translate":{"type":"array","value":"number","length":2,"default":[0,0],"function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"units":"pixels","requires":["icon-image"]},"icon-translate-anchor":{"type":"enum","function":"piecewise-constant","zoom-function":true,"property-function":true,"values":{"map":{},"viewport":{}},"default":"map","requires":["icon-image","icon-translate"]},"text-opacity":{"type":"number","default":1,"minimum":0,"maximum":1,"function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"requires":["text-field"]},"text-color":{"type":"color","default":"#000000","function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"requires":["text-field"]},"text-halo-color":{"type":"color","default":"rgba(0, 0, 0, 0)","function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"requires":["text-field"]},"text-halo-width":{"type":"number","default":0,"minimum":0,"function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"units":"pixels","requires":["text-field"]},"text-halo-blur":{"type":"number","default":0,"minimum":0,"function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"units":"pixels","requires":["text-field"]},"text-translate":{"type":"array","value":"number","length":2,"default":[0,0],"function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"units":"pixels","requires":["text-field"]},"text-translate-anchor":{"type":"enum","function":"piecewise-constant","zoom-function":true,"property-function":true,"values":{"map":{},"viewport":{}},"default":"map","requires":["text-field","text-translate"]}},"paint_raster":{"raster-opacity":{"type":"number","default":1,"minimum":0,"maximum":1,"function":"interpolated","zoom-function":true,"transition":true},"raster-hue-rotate":{"type":"number","default":0,"period":360,"function":"interpolated","zoom-function":true,"transition":true,"units":"degrees"},"raster-brightness-min":{"type":"number","function":"interpolated","zoom-function":true,"default":0,"minimum":0,"maximum":1,"transition":true},"raster-brightness-max":{"type":"number","function":"interpolated","zoom-function":true,"default":1,"minimum":0,"maximum":1,"transition":true},"raster-saturation":{"type":"number","default":0,"minimum":-1,"maximum":1,"function":"interpolated","zoom-function":true,"transition":true},"raster-contrast":{"type":"number","default":0,"minimum":-1,"maximum":1,"function":"interpolated","zoom-function":true,"transition":true},"raster-fade-duration":{"type":"number","default":300,"minimum":0,"function":"interpolated","zoom-function":true,"transition":true,"units":"milliseconds"}},"paint_background":{"background-color":{"type":"color","default":"#000000","function":"interpolated","zoom-function":true,"transition":true,"requires":[{"!":"background-pattern"}]},"background-pattern":{"type":"string","function":"piecewise-constant","zoom-function":true,"transition":true},"background-opacity":{"type":"number","default":1,"minimum":0,"maximum":1,"function":"interpolated","zoom-function":true,"transition":true}},"transition":{"duration":{"type":"number","default":300,"minimum":0,"units":"milliseconds"},"delay":{"type":"number","default":0,"minimum":0,"units":"milliseconds"}}}
-},{}],71:[function(require,module,exports){
+},{"./v8.min.json":73}],73:[function(require,module,exports){
+module.exports={"$version":8,"$root":{"version":{"required":true,"type":"enum","values":[8]},"name":{"type":"string"},"metadata":{"type":"*"},"center":{"type":"array","value":"number"},"zoom":{"type":"number"},"bearing":{"type":"number","default":0,"period":360,"units":"degrees"},"pitch":{"type":"number","default":0,"units":"degrees"},"light":{"type":"light"},"sources":{"required":true,"type":"sources"},"sprite":{"type":"string"},"glyphs":{"type":"string"},"transition":{"type":"transition"},"layers":{"required":true,"type":"array","value":"layer"}},"sources":{"*":{"type":"source"}},"source":["source_tile","source_geojson","source_video","source_image","source_canvas"],"source_tile":{"type":{"required":true,"type":"enum","values":{"vector":{},"raster":{}}},"url":{"type":"string"},"tiles":{"type":"array","value":"string"},"minzoom":{"type":"number","default":0},"maxzoom":{"type":"number","default":22},"tileSize":{"type":"number","default":512,"units":"pixels"},"*":{"type":"*"}},"source_geojson":{"type":{"required":true,"type":"enum","values":{"geojson":{}}},"data":{"type":"*"},"maxzoom":{"type":"number","default":18},"buffer":{"type":"number","default":128,"maximum":512,"minimum":0},"tolerance":{"type":"number","default":0.375},"cluster":{"type":"boolean","default":false},"clusterRadius":{"type":"number","default":50,"minimum":0},"clusterMaxZoom":{"type":"number"}},"source_video":{"type":{"required":true,"type":"enum","values":{"video":{}}},"urls":{"required":true,"type":"array","value":"string"},"coordinates":{"required":true,"type":"array","length":4,"value":{"type":"array","length":2,"value":"number"}}},"source_image":{"type":{"required":true,"type":"enum","values":{"image":{}}},"url":{"required":true,"type":"string"},"coordinates":{"required":true,"type":"array","length":4,"value":{"type":"array","length":2,"value":"number"}}},"source_canvas":{"type":{"required":true,"type":"enum","values":{"canvas":{}}},"coordinates":{"required":true,"type":"array","length":4,"value":{"type":"array","length":2,"value":"number"}},"animate":{"type":"boolean","default":"true"},"canvas":{"type":"string","required":true}},"layer":{"id":{"type":"string","required":true},"type":{"type":"enum","values":{"fill":{},"line":{},"symbol":{},"circle":{},"fill-extrusion":{},"raster":{},"background":{}}},"metadata":{"type":"*"},"ref":{"type":"string"},"source":{"type":"string"},"source-layer":{"type":"string"},"minzoom":{"type":"number","minimum":0,"maximum":24},"maxzoom":{"type":"number","minimum":0,"maximum":24},"filter":{"type":"filter"},"layout":{"type":"layout"},"paint":{"type":"paint"},"paint.*":{"type":"paint"}},"layout":["layout_fill","layout_line","layout_circle","layout_fill-extrusion","layout_symbol","layout_raster","layout_background"],"layout_background":{"visibility":{"type":"enum","values":{"visible":{},"none":{}},"default":"visible"}},"layout_fill":{"visibility":{"type":"enum","values":{"visible":{},"none":{}},"default":"visible"}},"layout_circle":{"visibility":{"type":"enum","values":{"visible":{},"none":{}},"default":"visible"}},"layout_fill-extrusion":{"visibility":{"type":"enum","values":{"visible":{},"none":{}},"default":"visible"}},"layout_line":{"line-cap":{"type":"enum","function":"piecewise-constant","zoom-function":true,"values":{"butt":{},"round":{},"square":{}},"default":"butt"},"line-join":{"type":"enum","function":"piecewise-constant","zoom-function":true,"values":{"bevel":{},"round":{},"miter":{}},"default":"miter"},"line-miter-limit":{"type":"number","default":2,"function":"interpolated","zoom-function":true,"requires":[{"line-join":"miter"}]},"line-round-limit":{"type":"number","default":1.05,"function":"interpolated","zoom-function":true,"requires":[{"line-join":"round"}]},"visibility":{"type":"enum","values":{"visible":{},"none":{}},"default":"visible"}},"layout_symbol":{"symbol-placement":{"type":"enum","function":"piecewise-constant","zoom-function":true,"values":{"point":{},"line":{}},"default":"point"},"symbol-spacing":{"type":"number","default":250,"minimum":1,"function":"interpolated","zoom-function":true,"units":"pixels","requires":[{"symbol-placement":"line"}]},"symbol-avoid-edges":{"type":"boolean","function":"piecewise-constant","zoom-function":true,"default":false},"icon-allow-overlap":{"type":"boolean","function":"piecewise-constant","zoom-function":true,"default":false,"requires":["icon-image"]},"icon-ignore-placement":{"type":"boolean","function":"piecewise-constant","zoom-function":true,"default":false,"requires":["icon-image"]},"icon-optional":{"type":"boolean","function":"piecewise-constant","zoom-function":true,"default":false,"requires":["icon-image","text-field"]},"icon-rotation-alignment":{"type":"enum","function":"piecewise-constant","zoom-function":true,"values":{"map":{},"viewport":{},"auto":{}},"default":"auto","requires":["icon-image"]},"icon-size":{"type":"number","default":1,"minimum":0,"function":"interpolated","zoom-function":true,"requires":["icon-image"]},"icon-text-fit":{"type":"enum","function":"piecewise-constant","zoom-function":true,"values":{"none":{},"width":{},"height":{},"both":{}},"default":"none","requires":["icon-image","text-field"]},"icon-text-fit-padding":{"type":"array","value":"number","length":4,"default":[0,0,0,0],"units":"pixels","function":"interpolated","zoom-function":true,"requires":["icon-image","text-field",{"icon-text-fit":["both","width","height"]}]},"icon-image":{"type":"string","function":"piecewise-constant","zoom-function":true,"tokens":true},"icon-rotate":{"type":"number","default":0,"period":360,"function":"interpolated","zoom-function":true,"property-function":true,"units":"degrees","requires":["icon-image"]},"icon-padding":{"type":"number","default":2,"minimum":0,"function":"interpolated","zoom-function":true,"units":"pixels","requires":["icon-image"]},"icon-keep-upright":{"type":"boolean","function":"piecewise-constant","zoom-function":true,"default":false,"requires":["icon-image",{"icon-rotation-alignment":"map"},{"symbol-placement":"line"}]},"icon-offset":{"type":"array","value":"number","length":2,"default":[0,0],"function":"interpolated","zoom-function":true,"property-function":true,"requires":["icon-image"]},"text-pitch-alignment":{"type":"enum","function":"piecewise-constant","zoom-function":true,"values":{"map":{},"viewport":{},"auto":{}},"default":"auto","requires":["text-field"]},"text-rotation-alignment":{"type":"enum","function":"piecewise-constant","zoom-function":true,"values":{"map":{},"viewport":{},"auto":{}},"default":"auto","requires":["text-field"]},"text-field":{"type":"string","function":"piecewise-constant","zoom-function":true,"default":"","tokens":true},"text-font":{"type":"array","value":"string","function":"piecewise-constant","zoom-function":true,"default":["Open Sans Regular","Arial Unicode MS Regular"],"requires":["text-field"]},"text-size":{"type":"number","default":16,"minimum":0,"units":"pixels","function":"interpolated","zoom-function":true,"requires":["text-field"]},"text-max-width":{"type":"number","default":10,"minimum":0,"units":"ems","function":"interpolated","zoom-function":true,"requires":["text-field"]},"text-line-height":{"type":"number","default":1.2,"units":"ems","function":"interpolated","zoom-function":true,"requires":["text-field"]},"text-letter-spacing":{"type":"number","default":0,"units":"ems","function":"interpolated","zoom-function":true,"requires":["text-field"]},"text-justify":{"type":"enum","function":"piecewise-constant","zoom-function":true,"values":{"left":{},"center":{},"right":{}},"default":"center","requires":["text-field"]},"text-anchor":{"type":"enum","function":"piecewise-constant","zoom-function":true,"values":{"center":{},"left":{},"right":{},"top":{},"bottom":{},"top-left":{},"top-right":{},"bottom-left":{},"bottom-right":{}},"default":"center","requires":["text-field"]},"text-max-angle":{"type":"number","default":45,"units":"degrees","function":"interpolated","zoom-function":true,"requires":["text-field",{"symbol-placement":"line"}]},"text-rotate":{"type":"number","default":0,"period":360,"units":"degrees","function":"interpolated","zoom-function":true,"requires":["text-field"]},"text-padding":{"type":"number","default":2,"minimum":0,"units":"pixels","function":"interpolated","zoom-function":true,"requires":["text-field"]},"text-keep-upright":{"type":"boolean","function":"piecewise-constant","zoom-function":true,"default":true,"requires":["text-field",{"text-rotation-alignment":"map"},{"symbol-placement":"line"}]},"text-transform":{"type":"enum","function":"piecewise-constant","zoom-function":true,"values":{"none":{},"uppercase":{},"lowercase":{}},"default":"none","requires":["text-field"]},"text-offset":{"type":"array","value":"number","units":"ems","function":"interpolated","zoom-function":true,"length":2,"default":[0,0],"requires":["text-field"]},"text-allow-overlap":{"type":"boolean","function":"piecewise-constant","zoom-function":true,"default":false,"requires":["text-field"]},"text-ignore-placement":{"type":"boolean","function":"piecewise-constant","zoom-function":true,"default":false,"requires":["text-field"]},"text-optional":{"type":"boolean","function":"piecewise-constant","zoom-function":true,"default":false,"requires":["text-field","icon-image"]},"visibility":{"type":"enum","values":{"visible":{},"none":{}},"default":"visible"}},"layout_raster":{"visibility":{"type":"enum","values":{"visible":{},"none":{}},"default":"visible"}},"filter":{"type":"array","value":"*"},"filter_operator":{"type":"enum","values":{"==":{},"!=":{},">":{},">=":{},"<":{},"<=":{},"in":{},"!in":{},"all":{},"any":{},"none":{},"has":{},"!has":{}}},"geometry_type":{"type":"enum","values":{"Point":{},"LineString":{},"Polygon":{}}},"function":{"stops":{"type":"array","value":"function_stop"},"base":{"type":"number","default":1,"minimum":0},"property":{"type":"string","default":"$zoom"},"type":{"type":"enum","values":{"identity":{},"exponential":{},"interval":{},"categorical":{}},"default":"exponential"},"colorSpace":{"type":"enum","values":{"rgb":{},"lab":{},"hcl":{}},"default":"rgb"}},"function_stop":{"type":"array","minimum":0,"maximum":22,"value":["number","color"],"length":2},"light":{"anchor":{"type":"enum","default":"viewport","values":{"map":{},"viewport":{}},"transition":false},"position":{"type":"array","default":[1.15,210,30],"length":3,"value":"number","transition":true,"function":"interpolated","zoom-function":true,"property-function":false},"color":{"type":"color","default":"#ffffff","function":"interpolated","zoom-function":true,"property-function":false,"transition":true},"intensity":{"type":"number","default":0.5,"minimum":0,"maximum":1,"function":"interpolated","zoom-function":true,"property-function":false,"transition":true}},"paint":["paint_fill","paint_line","paint_circle","paint_fill-extrusion","paint_symbol","paint_raster","paint_background"],"paint_fill":{"fill-antialias":{"type":"boolean","function":"piecewise-constant","zoom-function":true,"default":true},"fill-opacity":{"type":"number","function":"interpolated","zoom-function":true,"property-function":true,"default":1,"minimum":0,"maximum":1,"transition":true},"fill-color":{"type":"color","default":"#000000","function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"requires":[{"!":"fill-pattern"}]},"fill-outline-color":{"type":"color","function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"requires":[{"!":"fill-pattern"},{"fill-antialias":true}]},"fill-translate":{"type":"array","value":"number","length":2,"default":[0,0],"function":"interpolated","zoom-function":true,"transition":true,"units":"pixels"},"fill-translate-anchor":{"type":"enum","function":"piecewise-constant","zoom-function":true,"values":{"map":{},"viewport":{}},"default":"map","requires":["fill-translate"]},"fill-pattern":{"type":"string","function":"piecewise-constant","zoom-function":true,"transition":true}},"paint_fill-extrusion":{"fill-extrusion-opacity":{"type":"number","function":"interpolated","zoom-function":true,"property-function":false,"default":1,"minimum":0,"maximum":1,"transition":true},"fill-extrusion-color":{"type":"color","default":"#000000","function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"requires":[{"!":"fill-extrusion-pattern"}]},"fill-extrusion-translate":{"type":"array","value":"number","length":2,"default":[0,0],"function":"interpolated","zoom-function":true,"transition":true,"units":"pixels"},"fill-extrusion-translate-anchor":{"type":"enum","function":"piecewise-constant","zoom-function":true,"values":{"map":{},"viewport":{}},"default":"map","requires":["fill-extrusion-translate"]},"fill-extrusion-pattern":{"type":"string","function":"piecewise-constant","zoom-function":true,"transition":true},"fill-extrusion-height":{"type":"number","function":"interpolated","zoom-function":true,"property-function":true,"default":0,"minimum":0,"units":"meters","transition":true},"fill-extrusion-base":{"type":"number","function":"interpolated","zoom-function":true,"property-function":true,"default":0,"minimum":0,"units":"meters","transition":true,"requires":["fill-extrusion-height"]}},"paint_line":{"line-opacity":{"type":"number","function":"interpolated","zoom-function":true,"property-function":true,"default":1,"minimum":0,"maximum":1,"transition":true},"line-color":{"type":"color","default":"#000000","function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"requires":[{"!":"line-pattern"}]},"line-translate":{"type":"array","value":"number","length":2,"default":[0,0],"function":"interpolated","zoom-function":true,"transition":true,"units":"pixels"},"line-translate-anchor":{"type":"enum","function":"piecewise-constant","zoom-function":true,"values":{"map":{},"viewport":{}},"default":"map","requires":["line-translate"]},"line-width":{"type":"number","default":1,"minimum":0,"function":"interpolated","zoom-function":true,"transition":true,"units":"pixels"},"line-gap-width":{"type":"number","default":0,"minimum":0,"function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"units":"pixels"},"line-offset":{"type":"number","default":0,"function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"units":"pixels"},"line-blur":{"type":"number","default":0,"minimum":0,"function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"units":"pixels"},"line-dasharray":{"type":"array","value":"number","function":"piecewise-constant","zoom-function":true,"minimum":0,"transition":true,"units":"line widths","requires":[{"!":"line-pattern"}]},"line-pattern":{"type":"string","function":"piecewise-constant","zoom-function":true,"transition":true}},"paint_circle":{"circle-radius":{"type":"number","default":5,"minimum":0,"function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"units":"pixels"},"circle-color":{"type":"color","default":"#000000","function":"interpolated","zoom-function":true,"property-function":true,"transition":true},"circle-blur":{"type":"number","default":0,"function":"interpolated","zoom-function":true,"property-function":true,"transition":true},"circle-opacity":{"type":"number","default":1,"minimum":0,"maximum":1,"function":"interpolated","zoom-function":true,"property-function":true,"transition":true},"circle-translate":{"type":"array","value":"number","length":2,"default":[0,0],"function":"interpolated","zoom-function":true,"transition":true,"units":"pixels"},"circle-translate-anchor":{"type":"enum","function":"piecewise-constant","zoom-function":true,"values":{"map":{},"viewport":{}},"default":"map","requires":["circle-translate"]},"circle-pitch-scale":{"type":"enum","function":"piecewise-constant","zoom-function":true,"values":{"map":{},"viewport":{}},"default":"map"},"circle-stroke-width":{"type":"number","default":0,"minimum":0,"function":"interpolated","zoom-function":true,"property-function":true,"transition":true,"units":"pixels"},"circle-stroke-color":{"type":"color","default":"#000000","function":"interpolated","zoom-function":true,"property-function":true,"transition":true},"circle-stroke-opacity":{"type":"number","default":1,"minimum":0,"maximum":1,"function":"interpolated","zoom-function":true,"property-function":true,"transition":true}},"paint_symbol":{"icon-opacity":{"type":"number","default":1,"minimum":0,"maximum":1,"function":"interpolated","zoom-function":true,"transition":true,"requires":["icon-image"]},"icon-color":{"type":"color","default":"#000000","function":"interpolated","zoom-function":true,"transition":true,"requires":["icon-image"]},"icon-halo-color":{"type":"color","default":"rgba(0, 0, 0, 0)","function":"interpolated","zoom-function":true,"transition":true,"requires":["icon-image"]},"icon-halo-width":{"type":"number","default":0,"minimum":0,"function":"interpolated","zoom-function":true,"transition":true,"units":"pixels","requires":["icon-image"]},"icon-halo-blur":{"type":"number","default":0,"minimum":0,"function":"interpolated","zoom-function":true,"transition":true,"units":"pixels","requires":["icon-image"]},"icon-translate":{"type":"array","value":"number","length":2,"default":[0,0],"function":"interpolated","zoom-function":true,"transition":true,"units":"pixels","requires":["icon-image"]},"icon-translate-anchor":{"type":"enum","function":"piecewise-constant","zoom-function":true,"values":{"map":{},"viewport":{}},"default":"map","requires":["icon-image","icon-translate"]},"text-opacity":{"type":"number","default":1,"minimum":0,"maximum":1,"function":"interpolated","zoom-function":true,"transition":true,"requires":["text-field"]},"text-color":{"type":"color","default":"#000000","function":"interpolated","zoom-function":true,"transition":true,"requires":["text-field"]},"text-halo-color":{"type":"color","default":"rgba(0, 0, 0, 0)","function":"interpolated","zoom-function":true,"transition":true,"requires":["text-field"]},"text-halo-width":{"type":"number","default":0,"minimum":0,"function":"interpolated","zoom-function":true,"transition":true,"units":"pixels","requires":["text-field"]},"text-halo-blur":{"type":"number","default":0,"minimum":0,"function":"interpolated","zoom-function":true,"transition":true,"units":"pixels","requires":["text-field"]},"text-translate":{"type":"array","value":"number","length":2,"default":[0,0],"function":"interpolated","zoom-function":true,"transition":true,"units":"pixels","requires":["text-field"]},"text-translate-anchor":{"type":"enum","function":"piecewise-constant","zoom-function":true,"values":{"map":{},"viewport":{}},"default":"map","requires":["text-field","text-translate"]}},"paint_raster":{"raster-opacity":{"type":"number","default":1,"minimum":0,"maximum":1,"function":"interpolated","zoom-function":true,"transition":true},"raster-hue-rotate":{"type":"number","default":0,"period":360,"function":"interpolated","zoom-function":true,"transition":true,"units":"degrees"},"raster-brightness-min":{"type":"number","function":"interpolated","zoom-function":true,"default":0,"minimum":0,"maximum":1,"transition":true},"raster-brightness-max":{"type":"number","function":"interpolated","zoom-function":true,"default":1,"minimum":0,"maximum":1,"transition":true},"raster-saturation":{"type":"number","default":0,"minimum":-1,"maximum":1,"function":"interpolated","zoom-function":true,"transition":true},"raster-contrast":{"type":"number","default":0,"minimum":-1,"maximum":1,"function":"interpolated","zoom-function":true,"transition":true},"raster-fade-duration":{"type":"number","default":300,"minimum":0,"function":"interpolated","zoom-function":true,"transition":true,"units":"milliseconds"}},"paint_background":{"background-color":{"type":"color","default":"#000000","function":"interpolated","zoom-function":true,"transition":true,"requires":[{"!":"background-pattern"}]},"background-pattern":{"type":"string","function":"piecewise-constant","zoom-function":true,"transition":true},"background-opacity":{"type":"number","default":1,"minimum":0,"maximum":1,"function":"interpolated","zoom-function":true,"transition":true}},"transition":{"duration":{"type":"number","default":300,"minimum":0,"units":"milliseconds"},"delay":{"type":"number","default":0,"minimum":0,"units":"milliseconds"}}}
+},{}],74:[function(require,module,exports){
 'use strict';
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -25543,7 +25867,7 @@ function isWebGLSupported(failIfMajorPerformanceCaveat) {
     }
 }
 
-},{}],72:[function(require,module,exports){
+},{}],75:[function(require,module,exports){
 'use strict';
 var ProgramConfiguration = require('./program_configuration');
 var Segment = function Segment(vertexOffset, primitiveOffset) {
@@ -25631,7 +25955,7 @@ function serializePaintVertexArrays(layerData, transferables) {
 }
 ArrayGroup.MAX_VERTEX_ARRAY_LENGTH = Math.pow(2, 16) - 1;
 module.exports = ArrayGroup;
-},{"./program_configuration":86}],73:[function(require,module,exports){
+},{"./program_configuration":89}],76:[function(require,module,exports){
 'use strict';
 var ArrayGroup = require('./array_group');
 var BufferGroup = require('./buffer_group');
@@ -25696,7 +26020,7 @@ Bucket.deserialize = function (input, style) {
     }
     return output;
 };
-},{"../util/util":198,"./array_group":72,"./buffer_group":80}],74:[function(require,module,exports){
+},{"../util/util":203,"./array_group":75,"./buffer_group":83}],77:[function(require,module,exports){
 'use strict';
 var Bucket = require('../bucket');
 var createVertexArrayType = require('../vertex_array_type');
@@ -25784,7 +26108,7 @@ var CircleBucket = function (Bucket) {
     return CircleBucket;
 }(Bucket);
 module.exports = CircleBucket;
-},{"../bucket":73,"../element_array_type":81,"../extent":82,"../load_geometry":84,"../vertex_array_type":88}],75:[function(require,module,exports){
+},{"../bucket":76,"../element_array_type":84,"../extent":85,"../load_geometry":87,"../vertex_array_type":91}],78:[function(require,module,exports){
 'use strict';
 var Bucket = require('../bucket');
 var createVertexArrayType = require('../vertex_array_type');
@@ -25873,7 +26197,7 @@ var FillBucket = function (Bucket) {
     return FillBucket;
 }(Bucket);
 module.exports = FillBucket;
-},{"../../util/classify_rings":182,"../bucket":73,"../element_array_type":81,"../load_geometry":84,"../vertex_array_type":88,"earcut":13}],76:[function(require,module,exports){
+},{"../../util/classify_rings":187,"../bucket":76,"../element_array_type":84,"../load_geometry":87,"../vertex_array_type":91,"earcut":15}],79:[function(require,module,exports){
 'use strict';
 var Bucket = require('../bucket');
 var createVertexArrayType = require('../vertex_array_type');
@@ -25989,7 +26313,7 @@ module.exports = FillExtrusionBucket;
 function isBoundaryEdge(p1, p2) {
     return p1.x === p2.x && (p1.x < 0 || p1.x > EXTENT) || p1.y === p2.y && (p1.y < 0 || p1.y > EXTENT);
 }
-},{"../../util/classify_rings":182,"../bucket":73,"../element_array_type":81,"../extent":82,"../load_geometry":84,"../vertex_array_type":88,"earcut":13}],77:[function(require,module,exports){
+},{"../../util/classify_rings":187,"../bucket":76,"../element_array_type":84,"../extent":85,"../load_geometry":87,"../vertex_array_type":91,"earcut":15}],80:[function(require,module,exports){
 'use strict';
 var Bucket = require('../bucket');
 var createVertexArrayType = require('../vertex_array_type');
@@ -26103,9 +26427,12 @@ var LineBucket = function (Bucket) {
             currentVertex = vertices[i];
             nextNormal = nextVertex ? nextVertex.sub(currentVertex)._unit()._perp() : prevNormal;
             prevNormal = prevNormal || nextNormal;
-            var joinNormal = prevNormal.add(nextNormal)._unit();
+            var joinNormal = prevNormal.add(nextNormal);
+            if (joinNormal.x !== 0 || joinNormal.y !== 0) {
+                joinNormal._unit();
+            }
             var cosHalfAngle = joinNormal.x * nextNormal.x + joinNormal.y * nextNormal.y;
-            var miterLength = 1 / cosHalfAngle;
+            var miterLength = cosHalfAngle !== 0 ? 1 / cosHalfAngle : Infinity;
             var isSharpCorner = cosHalfAngle < COS_HALF_SHARP_CORNER && prevVertex && nextVertex;
             if (isSharpCorner && i > 0) {
                 var prevSegmentLength = currentVertex.dist(prevVertex);
@@ -26141,7 +26468,7 @@ var LineBucket = function (Bucket) {
                 this$1.addCurrentVertex(currentVertex, this$1.distance, joinNormal, 0, 0, false, segment);
             } else if (currentJoin === 'flipbevel') {
                 if (miterLength > 100) {
-                    joinNormal = nextNormal.clone();
+                    joinNormal = nextNormal.clone().mult(-1);
                 } else {
                     var direction = prevNormal.x * nextNormal.y - prevNormal.y * nextNormal.x > 0 ? -1 : 1;
                     var bevelLength = miterLength * prevNormal.add(nextNormal).mag() / prevNormal.sub(nextNormal).mag();
@@ -26271,7 +26598,7 @@ var LineBucket = function (Bucket) {
     return LineBucket;
 }(Bucket);
 module.exports = LineBucket;
-},{"../bucket":73,"../element_array_type":81,"../extent":82,"../load_geometry":84,"../vertex_array_type":88}],78:[function(require,module,exports){
+},{"../bucket":76,"../element_array_type":84,"../extent":85,"../load_geometry":87,"../vertex_array_type":91}],81:[function(require,module,exports){
 'use strict';
 var Point = require('point-geometry');
 var ArrayGroup = require('../array_group');
@@ -26294,6 +26621,7 @@ var CollisionFeature = require('../../symbol/collision_feature');
 var findPoleOfInaccessibility = require('../../util/find_pole_of_inaccessibility');
 var classifyRings = require('../../util/classify_rings');
 var VectorTileFeature = require('vector-tile').VectorTileFeature;
+var rtlTextPlugin = require('../../source/rtl_text_plugin');
 var shapeText = Shaping.shapeText;
 var shapeIcon = Shaping.shapeIcon;
 var WritingMode = Shaping.WritingMode;
@@ -26403,7 +26731,11 @@ SymbolBucket.prototype.populate = function populate(features, options) {
         }
         var text;
         if (hasText) {
-            text = resolveText(feature, layout);
+            if (rtlTextPlugin.applyArabicShaping) {
+                text = rtlTextPlugin.applyArabicShaping(resolveText(feature, layout));
+            } else {
+                text = resolveText(feature, layout);
+            }
         }
         var icon;
         if (hasIcon) {
@@ -26794,7 +27126,7 @@ SymbolBucket.prototype.addSymbolQuad = function addSymbolQuad(symbolQuad) {
 };
 SymbolBucket.MAX_QUADS = 65535;
 module.exports = SymbolBucket;
-},{"../../symbol/anchor":144,"../../symbol/clip_line":146,"../../symbol/collision_feature":148,"../../symbol/get_anchors":150,"../../symbol/mergelines":153,"../../symbol/quads":154,"../../symbol/resolve_text":155,"../../symbol/shaping":156,"../../util/classify_rings":182,"../../util/find_pole_of_inaccessibility":188,"../../util/script_detection":195,"../../util/token":197,"../../util/util":198,"../array_group":72,"../buffer_group":80,"../element_array_type":81,"../extent":82,"../load_geometry":84,"../vertex_array_type":88,"point-geometry":205,"vector-tile":211}],79:[function(require,module,exports){
+},{"../../source/rtl_text_plugin":123,"../../symbol/anchor":149,"../../symbol/clip_line":151,"../../symbol/collision_feature":153,"../../symbol/get_anchors":155,"../../symbol/mergelines":158,"../../symbol/quads":159,"../../symbol/resolve_text":160,"../../symbol/shaping":161,"../../util/classify_rings":187,"../../util/find_pole_of_inaccessibility":193,"../../util/script_detection":200,"../../util/token":202,"../../util/util":203,"../array_group":75,"../buffer_group":83,"../element_array_type":84,"../extent":85,"../load_geometry":87,"../vertex_array_type":91,"point-geometry":210,"vector-tile":216}],82:[function(require,module,exports){
 'use strict';
 var AttributeType = {
     Int8: 'BYTE',
@@ -26845,7 +27177,7 @@ Buffer.BufferType = {
     ELEMENT: 'ELEMENT_ARRAY_BUFFER'
 };
 module.exports = Buffer;
-},{}],80:[function(require,module,exports){
+},{}],83:[function(require,module,exports){
 'use strict';
 var util = require('../util/util');
 var Buffer = require('./buffer');
@@ -26915,7 +27247,7 @@ BufferGroup.prototype.destroy = function destroy() {
     }
 };
 module.exports = BufferGroup;
-},{"../render/vertex_array_object":110,"../util/util":198,"./buffer":79,"./program_configuration":86}],81:[function(require,module,exports){
+},{"../render/vertex_array_object":113,"../util/util":203,"./buffer":82,"./program_configuration":89}],84:[function(require,module,exports){
 'use strict';
 var createStructArrayType = require('../util/struct_array');
 module.exports = createElementArrayType;
@@ -26928,10 +27260,10 @@ function createElementArrayType(components) {
             }]
     });
 }
-},{"../util/struct_array":196}],82:[function(require,module,exports){
+},{"../util/struct_array":201}],85:[function(require,module,exports){
 'use strict';
 module.exports = 8192;
-},{}],83:[function(require,module,exports){
+},{}],86:[function(require,module,exports){
 'use strict';
 var Point = require('point-geometry');
 var loadGeometry = require('./load_geometry');
@@ -27189,7 +27521,7 @@ function offsetLine(rings, offset) {
     }
     return newRings;
 }
-},{"../util/dictionary_coder":184,"../util/intersection_tests":191,"../util/struct_array":196,"../util/util":198,"../util/vectortile_to_geojson":199,"./extent":82,"./load_geometry":84,"feature-filter":15,"grid-index":26,"pbf":204,"point-geometry":205,"vector-tile":211}],84:[function(require,module,exports){
+},{"../util/dictionary_coder":189,"../util/intersection_tests":196,"../util/struct_array":201,"../util/util":203,"../util/vectortile_to_geojson":204,"./extent":85,"./load_geometry":87,"feature-filter":18,"grid-index":29,"pbf":209,"point-geometry":210,"vector-tile":216}],87:[function(require,module,exports){
 'use strict';
 var util = require('../util/util');
 var EXTENT = require('./extent');
@@ -27220,7 +27552,7 @@ module.exports = function loadGeometry(feature, bits) {
     }
     return geometry;
 };
-},{"../util/util":198,"./extent":82}],85:[function(require,module,exports){
+},{"../util/util":203,"./extent":85}],88:[function(require,module,exports){
 'use strict';
 var createStructArrayType = require('../util/struct_array');
 var PosArray = createStructArrayType({
@@ -27231,7 +27563,7 @@ var PosArray = createStructArrayType({
         }]
 });
 module.exports = PosArray;
-},{"../util/struct_array":196}],86:[function(require,module,exports){
+},{"../util/struct_array":201}],89:[function(require,module,exports){
 'use strict';
 var createVertexArrayType = require('./vertex_array_type');
 var util = require('../util/util');
@@ -27406,7 +27738,7 @@ function normalizePaintAttribute(attribute, layer) {
     }, attribute);
 }
 module.exports = ProgramConfiguration;
-},{"../util/util":198,"./vertex_array_type":88}],87:[function(require,module,exports){
+},{"../util/util":203,"./vertex_array_type":91}],90:[function(require,module,exports){
 'use strict';
 var createStructArrayType = require('../util/struct_array');
 var RasterBoundsArray = createStructArrayType({
@@ -27424,7 +27756,7 @@ var RasterBoundsArray = createStructArrayType({
     ]
 });
 module.exports = RasterBoundsArray;
-},{"../util/struct_array":196}],88:[function(require,module,exports){
+},{"../util/struct_array":201}],91:[function(require,module,exports){
 'use strict';
 var createStructArrayType = require('../util/struct_array');
 module.exports = createVertexArrayType;
@@ -27434,7 +27766,7 @@ function createVertexArrayType(members) {
         alignment: 4
     });
 }
-},{"../util/struct_array":196}],89:[function(require,module,exports){
+},{"../util/struct_array":201}],92:[function(require,module,exports){
 'use strict';
 var Coordinate = function Coordinate(column, row, zoom) {
     this.column = column;
@@ -27464,7 +27796,7 @@ Coordinate.prototype._sub = function _sub(c) {
     return this;
 };
 module.exports = Coordinate;
-},{}],90:[function(require,module,exports){
+},{}],93:[function(require,module,exports){
 'use strict';
 var wrap = require('../util/util').wrap;
 var LngLat = function LngLat(lng, lat) {
@@ -27501,7 +27833,7 @@ LngLat.convert = function (input) {
     }
 };
 module.exports = LngLat;
-},{"../util/util":198}],91:[function(require,module,exports){
+},{"../util/util":203}],94:[function(require,module,exports){
 'use strict';
 var LngLat = require('./lng_lat');
 var LngLatBounds = function LngLatBounds(sw, ne) {
@@ -27603,7 +27935,7 @@ LngLatBounds.convert = function (input) {
     return new LngLatBounds(input);
 };
 module.exports = LngLatBounds;
-},{"./lng_lat":90}],92:[function(require,module,exports){
+},{"./lng_lat":93}],95:[function(require,module,exports){
 'use strict';
 var LngLat = require('./lng_lat'), Point = require('point-geometry'), Coordinate = require('./coordinate'), util = require('../util/util'), interp = require('../util/interpolate'), TileCoord = require('../source/tile_coord'), EXTENT = require('../data/extent'), glmatrix = require('@mapbox/gl-matrix');
 var vec4 = glmatrix.vec4, mat4 = glmatrix.mat4, mat2 = glmatrix.mat2;
@@ -27972,7 +28304,7 @@ Transform.prototype._calcMatrices = function _calcMatrices() {
 };
 Object.defineProperties(Transform.prototype, prototypeAccessors);
 module.exports = Transform;
-},{"../data/extent":82,"../source/tile_coord":122,"../util/interpolate":190,"../util/util":198,"./coordinate":89,"./lng_lat":90,"@mapbox/gl-matrix":7,"point-geometry":205}],93:[function(require,module,exports){
+},{"../data/extent":85,"../source/tile_coord":127,"../util/interpolate":195,"../util/util":203,"./coordinate":92,"./lng_lat":93,"@mapbox/gl-matrix":7,"point-geometry":210}],96:[function(require,module,exports){
 'use strict';
 var WorkerPool = require('./util/worker_pool');
 var globalWorkerPool;
@@ -27982,7 +28314,7 @@ module.exports = function getGlobalWorkerPool() {
     }
     return globalWorkerPool;
 };
-},{"./util/worker_pool":201}],94:[function(require,module,exports){
+},{"./util/worker_pool":206}],97:[function(require,module,exports){
 'use strict';
 var simplexFont = {
     ' ': [
@@ -30876,7 +31208,7 @@ module.exports = function textVertices(text, left, baseline, scale) {
     }
     return strokes;
 };
-},{}],95:[function(require,module,exports){
+},{}],98:[function(require,module,exports){
 'use strict';
 var browser = require('./util/browser');
 var mapboxgl = module.exports = {};
@@ -30901,6 +31233,8 @@ mapboxgl.util.getJSON = ajax.getJSON;
 mapboxgl.util.getArrayBuffer = ajax.getArrayBuffer;
 var config = require('./util/config');
 mapboxgl.config = config;
+var rtlTextPlugin = require('./source/rtl_text_plugin');
+mapboxgl.setRTLTextPlugin = rtlTextPlugin.setRTLTextPlugin;
 Object.defineProperty(mapboxgl, 'accessToken', {
     get: function () {
         return config.ACCESS_TOKEN;
@@ -30909,7 +31243,7 @@ Object.defineProperty(mapboxgl, 'accessToken', {
         config.ACCESS_TOKEN = token;
     }
 });
-},{"../package.json":202,"./geo/lng_lat":90,"./geo/lng_lat_bounds":91,"./style/style":132,"./ui/control/attribution_control":162,"./ui/control/geolocate_control":163,"./ui/control/navigation_control":164,"./ui/control/scale_control":165,"./ui/map":174,"./ui/marker":175,"./ui/popup":176,"./util/ajax":178,"./util/browser":179,"./util/config":183,"./util/evented":187,"./util/util":198,"point-geometry":205}],96:[function(require,module,exports){
+},{"../package.json":207,"./geo/lng_lat":93,"./geo/lng_lat_bounds":94,"./source/rtl_text_plugin":123,"./style/style":137,"./ui/control/attribution_control":167,"./ui/control/geolocate_control":168,"./ui/control/navigation_control":169,"./ui/control/scale_control":170,"./ui/map":179,"./ui/marker":180,"./ui/popup":181,"./util/ajax":183,"./util/browser":184,"./util/config":188,"./util/evented":192,"./util/util":203,"point-geometry":210}],99:[function(require,module,exports){
 'use strict';
 var pattern = require('./pattern');
 module.exports = drawBackground;
@@ -30949,7 +31283,7 @@ function drawBackground(painter, sourceCache, layer) {
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, painter.tileExtentBuffer.length);
     }
 }
-},{"./pattern":108}],97:[function(require,module,exports){
+},{"./pattern":111}],100:[function(require,module,exports){
 'use strict';
 var browser = require('../util/browser');
 module.exports = drawCircles;
@@ -30987,7 +31321,7 @@ function drawCircles(painter, sourceCache, layer, coords) {
         }
     }
 }
-},{"../util/browser":179}],98:[function(require,module,exports){
+},{"../util/browser":184}],101:[function(require,module,exports){
 'use strict';
 module.exports = drawCollisionDebug;
 function drawCollisionDebug(painter, sourceCache, layer, coords) {
@@ -31016,7 +31350,7 @@ function drawCollisionDebug(painter, sourceCache, layer, coords) {
         }
     }
 }
-},{}],99:[function(require,module,exports){
+},{}],102:[function(require,module,exports){
 'use strict';
 var textVertices = require('../lib/debugtext');
 var browser = require('../util/browser');
@@ -31083,7 +31417,7 @@ function drawDebugTile(painter, sourceCache, coord) {
     gl.uniformMatrix4fv(program.u_matrix, false, posMatrix);
     gl.drawArrays(gl.LINES, 0, debugTextBuffer.length);
 }
-},{"../data/buffer":79,"../data/extent":82,"../data/pos_array":85,"../lib/debugtext":94,"../util/browser":179,"./vertex_array_object":110,"@mapbox/gl-matrix":7}],100:[function(require,module,exports){
+},{"../data/buffer":82,"../data/extent":85,"../data/pos_array":88,"../lib/debugtext":97,"../util/browser":184,"./vertex_array_object":113,"@mapbox/gl-matrix":7}],103:[function(require,module,exports){
 'use strict';
 var pattern = require('./pattern');
 module.exports = drawFill;
@@ -31156,7 +31490,7 @@ function setFillProgram(programId, usePattern, painter, layerData, layer, tile, 
     painter.gl.uniformMatrix4fv(program.u_matrix, false, painter.translatePosMatrix(coord.posMatrix, tile, layer.paint['fill-translate'], layer.paint['fill-translate-anchor']));
     return program;
 }
-},{"./pattern":108}],101:[function(require,module,exports){
+},{"./pattern":111}],104:[function(require,module,exports){
 'use strict';
 var glMatrix = require('@mapbox/gl-matrix');
 var Buffer = require('../data/buffer');
@@ -31306,7 +31640,7 @@ function setLight(program, painter) {
     gl.uniform1f(program.u_lightintensity, light.calculated.intensity);
     gl.uniform3fv(program.u_lightcolor, light.calculated.color.slice(0, 3));
 }
-},{"../data/buffer":79,"../data/pos_array":85,"./pattern":108,"./vertex_array_object":110,"@mapbox/gl-matrix":7}],102:[function(require,module,exports){
+},{"../data/buffer":82,"../data/pos_array":88,"./pattern":111,"./vertex_array_object":113,"@mapbox/gl-matrix":7}],105:[function(require,module,exports){
 'use strict';
 var browser = require('../util/browser');
 var pixelsToTileUnits = require('../source/pixels_to_tile_units');
@@ -31396,7 +31730,7 @@ function drawLineTile(program, painter, tile, buffers, layer, coord, layerData, 
         gl.drawElements(gl.TRIANGLES, segment.primitiveLength * 3, gl.UNSIGNED_SHORT, segment.primitiveOffset * 3 * 2);
     }
 }
-},{"../source/pixels_to_tile_units":116,"../util/browser":179}],103:[function(require,module,exports){
+},{"../source/pixels_to_tile_units":120,"../util/browser":184}],106:[function(require,module,exports){
 'use strict';
 var util = require('../util/util');
 module.exports = drawRaster;
@@ -31505,7 +31839,7 @@ function getFadeValues(tile, parentTile, layer, transform) {
         };
     }
 }
-},{"../util/util":198}],104:[function(require,module,exports){
+},{"../util/util":203}],107:[function(require,module,exports){
 'use strict';
 var browser = require('../util/browser');
 var drawCollisionDebug = require('./draw_collision_debug');
@@ -31545,7 +31879,7 @@ function drawLayerSymbols(painter, sourceCache, layer, coords, isText, translate
     } else {
         gl.disable(gl.DEPTH_TEST);
     }
-    var program;
+    var program, prevFontstack;
     for (var i = 0, list = coords; i < list.length; i += 1) {
         var coord = list[i];
         var tile = sourceCache.getTile(coord);
@@ -31556,13 +31890,14 @@ function drawLayerSymbols(painter, sourceCache, layer, coords, isText, translate
         if (!buffers || !buffers.segments.length)
             continue;
         var isSDF = isText || bucket.sdfIcons;
-        if (!program) {
+        if (!program || bucket.fontstack !== prevFontstack) {
             program = painter.useProgram(isSDF ? 'symbolSDF' : 'symbolIcon');
             setSymbolDrawState(program, painter, isText, isSDF, rotateWithMap, pitchWithMap, bucket.fontstack, size, bucket.iconsNeedLinear, isText ? bucket.adjustedTextSize : bucket.adjustedIconSize, opacity);
         }
         painter.enableTileClippingMask(coord);
         gl.uniformMatrix4fv(program.u_matrix, false, painter.translatePosMatrix(coord.posMatrix, tile, translate, translateAnchor));
         drawTileSymbols(program, painter, layer, tile, buffers, isText, isSDF, pitchWithMap, size, haloWidth, haloColor, haloBlur, color);
+        prevFontstack = bucket.fontstack;
     }
     if (!depthOn)
         gl.enable(gl.DEPTH_TEST);
@@ -31629,7 +31964,7 @@ function drawSymbolElements(buffers, layer, gl, program) {
         gl.drawElements(gl.TRIANGLES, segment.primitiveLength * 3, gl.UNSIGNED_SHORT, segment.primitiveOffset * 3 * 2);
     }
 }
-},{"../source/pixels_to_tile_units":116,"../util/browser":179,"./draw_collision_debug":98}],105:[function(require,module,exports){
+},{"../source/pixels_to_tile_units":120,"../util/browser":184,"./draw_collision_debug":101}],108:[function(require,module,exports){
 'use strict';
 var FrameHistory = function FrameHistory() {
     this.changeTimes = new Float64Array(256);
@@ -31688,7 +32023,7 @@ FrameHistory.prototype.bind = function bind(gl) {
     }
 };
 module.exports = FrameHistory;
-},{}],106:[function(require,module,exports){
+},{}],109:[function(require,module,exports){
 'use strict';
 var util = require('../util/util');
 var LineAtlas = function LineAtlas(width, height) {
@@ -31786,7 +32121,7 @@ LineAtlas.prototype.bind = function bind(gl) {
     }
 };
 module.exports = LineAtlas;
-},{"../util/util":198}],107:[function(require,module,exports){
+},{"../util/util":203}],110:[function(require,module,exports){
 'use strict';
 var browser = require('../util/browser');
 var mat4 = require('@mapbox/gl-matrix').mat4;
@@ -31814,7 +32149,10 @@ var draw = {
 var Painter = function Painter(gl, transform) {
     this.gl = gl;
     this.transform = transform;
-    this.reusableTextures = {};
+    this.reusableTextures = {
+        tiles: {},
+        viewport: null
+    };
     this.preFbos = {};
     this.frameHistory = new FrameHistory();
     this.setup();
@@ -32017,34 +32355,29 @@ Painter.prototype.translatePosMatrix = function translatePosMatrix(matrix, tile,
     return translatedMatrix;
 };
 Painter.prototype.saveTileTexture = function saveTileTexture(texture) {
-    var textures = this.reusableTextures[texture.size];
+    var textures = this.reusableTextures.tiles[texture.size];
     if (!textures) {
-        this.reusableTextures[texture.size] = [texture];
+        this.reusableTextures.tiles[texture.size] = [texture];
     } else {
         textures.push(texture);
     }
 };
 Painter.prototype.saveViewportTexture = function saveViewportTexture(texture) {
-    if (!this.reusableTextures.viewport)
-        this.reusableTextures.viewport = {};
-    this.reusableTextures.viewport.texture = texture;
+    this.reusableTextures.viewport = texture;
 };
-Painter.prototype.getTileTexture = function getTileTexture(width, height) {
-    var widthTextures = this.reusableTextures[width];
-    if (widthTextures) {
-        var textures = widthTextures[height || width];
-        return textures && textures.length > 0 ? textures.pop() : null;
-    }
+Painter.prototype.getTileTexture = function getTileTexture(size) {
+    var textures = this.reusableTextures.tiles[size];
+    return textures && textures.length > 0 ? textures.pop() : null;
 };
 Painter.prototype.getViewportTexture = function getViewportTexture(width, height) {
-    if (!this.reusableTextures.viewport)
+    var texture = this.reusableTextures.viewport;
+    if (!texture)
         return;
-    var texture = this.reusableTextures.viewport.texture;
     if (texture.width === width && texture.height === height) {
         return texture;
     } else {
         this.gl.deleteTexture(texture);
-        this.reusableTextures.viewport.texture = null;
+        this.reusableTextures.viewport = null;
         return;
     }
 };
@@ -32118,7 +32451,7 @@ Painter.prototype.useProgram = function useProgram(name, programConfiguration) {
     return nextProgram;
 };
 module.exports = Painter;
-},{"../data/buffer":79,"../data/extent":82,"../data/pos_array":85,"../data/program_configuration":86,"../data/raster_bounds_array":87,"../source/pixels_to_tile_units":116,"../source/source_cache":120,"../util/browser":179,"../util/util":198,"./draw_background":96,"./draw_circle":97,"./draw_debug":99,"./draw_fill":100,"./draw_fill_extrusion":101,"./draw_line":102,"./draw_raster":103,"./draw_symbol":104,"./frame_history":105,"./shaders":109,"./vertex_array_object":110,"@mapbox/gl-matrix":7}],108:[function(require,module,exports){
+},{"../data/buffer":82,"../data/extent":85,"../data/pos_array":88,"../data/program_configuration":89,"../data/raster_bounds_array":90,"../source/pixels_to_tile_units":120,"../source/source_cache":125,"../util/browser":184,"../util/util":203,"./draw_background":99,"./draw_circle":100,"./draw_debug":102,"./draw_fill":103,"./draw_fill_extrusion":104,"./draw_line":105,"./draw_raster":106,"./draw_symbol":107,"./frame_history":108,"./shaders":112,"./vertex_array_object":113,"@mapbox/gl-matrix":7}],111:[function(require,module,exports){
 'use strict';
 var pixelsToTileUnits = require('../source/pixels_to_tile_units');
 exports.prepare = function (image, painter, program) {
@@ -32150,7 +32483,7 @@ exports.setTile = function (tile, painter, program) {
     gl.uniform2f(program.u_pixel_coord_upper, pixelX >> 16, pixelY >> 16);
     gl.uniform2f(program.u_pixel_coord_lower, pixelX & 65535, pixelY & 65535);
 };
-},{"../source/pixels_to_tile_units":116}],109:[function(require,module,exports){
+},{"../source/pixels_to_tile_units":120}],112:[function(require,module,exports){
 'use strict';
 
 var path = require('path');
@@ -32224,7 +32557,7 @@ module.exports = {
         vertexSource: "const float PI = 3.141592653589793;\n\nattribute vec2 a_pos;\nattribute vec2 a_offset;\nattribute vec2 a_texture_pos;\nattribute vec4 a_data;\n\n\n// matrix is for the vertex position.\nuniform mat4 u_matrix;\n\nuniform mediump float u_zoom;\nuniform bool u_rotate_with_map;\nuniform bool u_pitch_with_map;\nuniform mediump float u_pitch;\nuniform mediump float u_bearing;\nuniform mediump float u_aspect_ratio;\nuniform vec2 u_extrude_scale;\n\nuniform vec2 u_texsize;\n\nvarying vec2 v_tex;\nvarying vec2 v_fade_tex;\nvarying float v_gamma_scale;\n\nvoid main() {\n    vec2 a_tex = a_texture_pos.xy;\n    mediump float a_labelminzoom = a_data[0];\n    mediump vec2 a_zoom = a_data.pq;\n    mediump float a_minzoom = a_zoom[0];\n    mediump float a_maxzoom = a_zoom[1];\n\n    // u_zoom is the current zoom level adjusted for the change in font size\n    mediump float z = 2.0 - step(a_minzoom, u_zoom) - (1.0 - step(a_maxzoom, u_zoom));\n\n    // pitch-alignment: map\n    // rotation-alignment: map | viewport\n    if (u_pitch_with_map) {\n        lowp float angle = u_rotate_with_map ? (a_data[1] / 256.0 * 2.0 * PI) : u_bearing;\n        lowp float asin = sin(angle);\n        lowp float acos = cos(angle);\n        mat2 RotationMatrix = mat2(acos, asin, -1.0 * asin, acos);\n        vec2 offset = RotationMatrix * a_offset;\n        vec2 extrude = u_extrude_scale * (offset / 64.0);\n        gl_Position = u_matrix * vec4(a_pos + extrude, 0, 1);\n        gl_Position.z += z * gl_Position.w;\n    // pitch-alignment: viewport\n    // rotation-alignment: map\n    } else if (u_rotate_with_map) {\n        // foreshortening factor to apply on pitched maps\n        // as a label goes from horizontal <=> vertical in angle\n        // it goes from 0% foreshortening to up to around 70% foreshortening\n        lowp float pitchfactor = 1.0 - cos(u_pitch * sin(u_pitch * 0.75));\n\n        lowp float lineangle = a_data[1] / 256.0 * 2.0 * PI;\n\n        // use the lineangle to position points a,b along the line\n        // project the points and calculate the label angle in projected space\n        // this calculation allows labels to be rendered unskewed on pitched maps\n        vec4 a = u_matrix * vec4(a_pos, 0, 1);\n        vec4 b = u_matrix * vec4(a_pos + vec2(cos(lineangle),sin(lineangle)), 0, 1);\n        lowp float angle = atan((b[1]/b[3] - a[1]/a[3])/u_aspect_ratio, b[0]/b[3] - a[0]/a[3]);\n        lowp float asin = sin(angle);\n        lowp float acos = cos(angle);\n        mat2 RotationMatrix = mat2(acos, -1.0 * asin, asin, acos);\n\n        vec2 offset = RotationMatrix * (vec2((1.0-pitchfactor)+(pitchfactor*cos(angle*2.0)), 1.0) * a_offset);\n        vec2 extrude = u_extrude_scale * (offset / 64.0);\n        gl_Position = u_matrix * vec4(a_pos, 0, 1) + vec4(extrude, 0, 0);\n        gl_Position.z += z * gl_Position.w;\n    // pitch-alignment: viewport\n    // rotation-alignment: viewport\n    } else {\n        vec2 extrude = u_extrude_scale * (a_offset / 64.0);\n        gl_Position = u_matrix * vec4(a_pos, 0, 1) + vec4(extrude, 0, 0);\n    }\n\n    v_gamma_scale = gl_Position.w;\n\n    v_tex = a_tex / u_texsize;\n    v_fade_tex = vec2(a_labelminzoom / 255.0, 0.0);\n}\n"
     }
 };
-},{"path":1}],110:[function(require,module,exports){
+},{"path":1}],113:[function(require,module,exports){
 'use strict';
 var VertexArrayObject = function VertexArrayObject() {
     this.boundProgram = null;
@@ -32287,7 +32620,88 @@ VertexArrayObject.prototype.destroy = function destroy() {
     }
 };
 module.exports = VertexArrayObject;
-},{}],111:[function(require,module,exports){
+},{}],114:[function(require,module,exports){
+'use strict';
+var ImageSource = require('./image_source');
+var window = require('../util/window');
+var CanvasSource = function (ImageSource) {
+    function CanvasSource(id, options, dispatcher, eventedParent) {
+        ImageSource.call(this, id, options, dispatcher, eventedParent);
+        this.options = options;
+        this.animate = options.hasOwnProperty('animate') ? options.animate : true;
+    }
+    if (ImageSource)
+        CanvasSource.__proto__ = ImageSource;
+    CanvasSource.prototype = Object.create(ImageSource && ImageSource.prototype);
+    CanvasSource.prototype.constructor = CanvasSource;
+    CanvasSource.prototype.load = function load() {
+        this.canvas = this.canvas || window.document.getElementById(this.options.canvas);
+        this.width = this.canvas.width;
+        this.height = this.canvas.height;
+        if (this._hasInvalidDimensions(this.canvas))
+            return this.fire('error', new Error('Canvas dimensions cannot be less than or equal to zero.'));
+        var loopID;
+        this.play = function () {
+            loopID = this.map.style.animationLoop.set(Infinity);
+            this.map._rerender();
+        };
+        this.pause = function () {
+            this.map.style.animationLoop.cancel(loopID);
+        };
+        this._finishLoading();
+    };
+    CanvasSource.prototype.getCanvas = function getCanvas() {
+        return this.canvas;
+    };
+    CanvasSource.prototype.onAdd = function onAdd(map) {
+        if (this.map)
+            return;
+        this.map = map;
+        this.load();
+        if (this.canvas) {
+            if (this.animate)
+                this.play();
+            this.setCoordinates(this.coordinates);
+        }
+    };
+    CanvasSource.prototype.prepare = function prepare() {
+        var resize = false;
+        if (this.canvas.width !== this.width) {
+            this.width = this.canvas.width;
+            resize = true;
+        }
+        if (this.canvas.height !== this.height) {
+            this.height = this.canvas.height;
+            resize = true;
+        }
+        if (this._hasInvalidDimensions())
+            return;
+        if (!this.tile)
+            return;
+        this._prepareImage(this.map.painter.gl, this.canvas, resize);
+    };
+    CanvasSource.prototype.serialize = function serialize() {
+        return {
+            type: 'canvas',
+            canvas: this.canvas,
+            coordinates: this.coordinates
+        };
+    };
+    CanvasSource.prototype._hasInvalidDimensions = function _hasInvalidDimensions() {
+        for (var i = 0, list = [
+                    this.canvas.width,
+                    this.canvas.height
+                ]; i < list.length; i += 1) {
+            var x = list[i];
+            if (isNaN(x) || x <= 0)
+                return true;
+        }
+        return false;
+    };
+    return CanvasSource;
+}(ImageSource);
+module.exports = CanvasSource;
+},{"../util/window":186,"./image_source":118}],115:[function(require,module,exports){
 'use strict';
 var Evented = require('../util/evented');
 var util = require('../util/util');
@@ -32439,7 +32853,7 @@ function resolveURL(url) {
     return a.href;
 }
 module.exports = GeoJSONSource;
-},{"../data/extent":82,"../util/evented":187,"../util/util":198,"../util/window":181}],112:[function(require,module,exports){
+},{"../data/extent":85,"../util/evented":192,"../util/util":203,"../util/window":186}],116:[function(require,module,exports){
 'use strict';
 var ajax = require('../util/ajax');
 var rewind = require('geojson-rewind');
@@ -32529,7 +32943,7 @@ var GeoJSONWorkerSource = function (VectorTileWorkerSource) {
     return GeoJSONWorkerSource;
 }(VectorTileWorkerSource);
 module.exports = GeoJSONWorkerSource;
-},{"../util/ajax":178,"./geojson_wrapper":113,"./vector_tile_worker_source":124,"geojson-rewind":17,"geojson-vt":21,"supercluster":208,"vt-pbf":215}],113:[function(require,module,exports){
+},{"../util/ajax":183,"./geojson_wrapper":117,"./vector_tile_worker_source":129,"geojson-rewind":20,"geojson-vt":24,"supercluster":214,"vt-pbf":220}],117:[function(require,module,exports){
 'use strict';
 var Point = require('point-geometry');
 var VectorTileFeature = require('vector-tile').VectorTileFeature;
@@ -32595,7 +33009,7 @@ GeoJSONWrapper.prototype.feature = function feature(i) {
     return new FeatureWrapper(this.features[i]);
 };
 module.exports = GeoJSONWrapper;
-},{"../data/extent":82,"point-geometry":205,"vector-tile":211}],114:[function(require,module,exports){
+},{"../data/extent":85,"point-geometry":210,"vector-tile":216}],118:[function(require,module,exports){
 'use strict';
 var util = require('../util/util');
 var window = require('../util/window');
@@ -32614,6 +33028,7 @@ var ImageSource = function (Evented) {
         this.id = id;
         this.dispatcher = dispatcher;
         this.coordinates = options.coordinates;
+        this.type = 'image';
         this.minzoom = 0;
         this.maxzoom = 22;
         this.tileSize = 512;
@@ -32683,7 +33098,7 @@ var ImageSource = function (Evented) {
             return;
         this._prepareImage(this.map.painter.gl, this.image);
     };
-    ImageSource.prototype._prepareImage = function _prepareImage(gl, image) {
+    ImageSource.prototype._prepareImage = function _prepareImage(gl, image, resize) {
         if (this.tile.state !== 'loaded') {
             this.tile.state = 'loaded';
             this.tile.texture = gl.createTexture();
@@ -32693,7 +33108,9 @@ var ImageSource = function (Evented) {
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-        } else if (image instanceof window.HTMLVideoElement) {
+        } else if (resize) {
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+        } else if (image instanceof window.HTMLVideoElement || image instanceof window.ImageData || image instanceof window.HTMLCanvasElement) {
             gl.bindTexture(gl.TEXTURE_2D, this.tile.texture);
             gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, image);
         }
@@ -32717,7 +33134,7 @@ var ImageSource = function (Evented) {
     return ImageSource;
 }(Evented);
 module.exports = ImageSource;
-},{"../data/buffer":79,"../data/extent":82,"../data/raster_bounds_array":87,"../geo/lng_lat":90,"../render/vertex_array_object":110,"../util/ajax":178,"../util/evented":187,"../util/util":198,"../util/window":181,"./tile_coord":122,"point-geometry":205}],115:[function(require,module,exports){
+},{"../data/buffer":82,"../data/extent":85,"../data/raster_bounds_array":90,"../geo/lng_lat":93,"../render/vertex_array_object":113,"../util/ajax":183,"../util/evented":192,"../util/util":203,"../util/window":186,"./tile_coord":127,"point-geometry":210}],119:[function(require,module,exports){
 'use strict';
 var util = require('../util/util');
 var ajax = require('../util/ajax');
@@ -32748,13 +33165,13 @@ module.exports = function (options, callback) {
         browser.frame(loaded.bind(null, null, options));
     }
 };
-},{"../util/ajax":178,"../util/browser":179,"../util/mapbox":194,"../util/util":198}],116:[function(require,module,exports){
+},{"../util/ajax":183,"../util/browser":184,"../util/mapbox":199,"../util/util":203}],120:[function(require,module,exports){
 'use strict';
 var EXTENT = require('../data/extent');
 module.exports = function (tile, pixelValue, z) {
     return pixelValue * (EXTENT / (tile.tileSize * Math.pow(2, z - tile.coord.z)));
 };
-},{"../data/extent":82}],117:[function(require,module,exports){
+},{"../data/extent":85}],121:[function(require,module,exports){
 'use strict';
 var TileCoord = require('./tile_coord');
 exports.rendered = function (sourceCache, styleLayers, queryGeometry, params, zoom, bearing) {
@@ -32814,7 +33231,7 @@ function mergeRenderedFeatureLayers(tiles) {
     }
     return result;
 }
-},{"./tile_coord":122}],118:[function(require,module,exports){
+},{"./tile_coord":127}],122:[function(require,module,exports){
 'use strict';
 var util = require('../util/util');
 var ajax = require('../util/ajax');
@@ -32827,6 +33244,7 @@ var RasterTileSource = function (Evented) {
         this.id = id;
         this.dispatcher = dispatcher;
         this.setEventedParent(eventedParent);
+        this.type = 'raster';
         this.minzoom = 0;
         this.maxzoom = 22;
         this.roundZoom = true;
@@ -32881,6 +33299,9 @@ var RasterTileSource = function (Evented) {
                 this.state = 'errored';
                 return callback(err);
             }
+            tile.setExpiryData(img);
+            delete img.cacheControl;
+            delete img.expires;
             var gl = this.map.painter.gl;
             tile.texture = this.map.painter.getTileTexture(img.width);
             if (tile.texture) {
@@ -32914,7 +33335,40 @@ var RasterTileSource = function (Evented) {
     return RasterTileSource;
 }(Evented);
 module.exports = RasterTileSource;
-},{"../util/ajax":178,"../util/evented":187,"../util/mapbox":194,"../util/util":198,"./load_tilejson":115}],119:[function(require,module,exports){
+},{"../util/ajax":183,"../util/evented":192,"../util/mapbox":199,"../util/util":203,"./load_tilejson":119}],123:[function(require,module,exports){
+'use strict';
+var ajax = require('../util/ajax');
+var window = require('../util/window');
+var pluginAvailableCallbacks = [];
+var pluginRequested = false;
+var pluginBlobURL = null;
+module.exports.registerForPluginAvailability = function (callback) {
+    if (pluginBlobURL) {
+        callback(pluginBlobURL);
+    } else {
+        pluginAvailableCallbacks.push(callback);
+    }
+};
+module.exports.errorCallback = null;
+module.exports.setRTLTextPlugin = function (pluginURL, callback) {
+    if (pluginRequested) {
+        throw new Error('setRTLTextPlugin cannot be called multiple times.');
+    }
+    pluginRequested = true;
+    module.exports.errorCallback = callback;
+    ajax.getArrayBuffer(pluginURL, function (err, response) {
+        if (err) {
+            callback(err);
+        } else {
+            pluginBlobURL = window.URL.createObjectURL(new window.Blob([response.data]), { type: 'text/javascript' });
+            for (var i = 0, list = pluginAvailableCallbacks; i < list.length; i += 1) {
+                var pluginAvailableCallback = list[i];
+                pluginAvailableCallback(pluginBlobURL);
+            }
+        }
+    });
+};
+},{"../util/ajax":183,"../util/window":186}],124:[function(require,module,exports){
 'use strict';
 var util = require('../util/util');
 var sourceTypes = {
@@ -32922,7 +33376,8 @@ var sourceTypes = {
     'raster': require('../source/raster_tile_source'),
     'geojson': require('../source/geojson_source'),
     'video': require('../source/video_source'),
-    'image': require('../source/image_source')
+    'image': require('../source/image_source'),
+    'canvas': require('../source/canvas_source')
 };
 exports.create = function (id, source, dispatcher, eventedParent) {
     source = new sourceTypes[source.type](id, source, dispatcher, eventedParent);
@@ -32944,7 +33399,7 @@ exports.getType = function (name) {
 exports.setType = function (name, type) {
     sourceTypes[name] = type;
 };
-},{"../source/geojson_source":111,"../source/image_source":114,"../source/raster_tile_source":118,"../source/vector_tile_source":123,"../source/video_source":125,"../util/util":198}],120:[function(require,module,exports){
+},{"../source/canvas_source":114,"../source/geojson_source":115,"../source/image_source":118,"../source/raster_tile_source":122,"../source/vector_tile_source":128,"../source/video_source":130,"../util/util":203}],125:[function(require,module,exports){
 'use strict';
 var Source = require('./source');
 var Tile = require('./tile');
@@ -32976,6 +33431,8 @@ var SourceCache = function (Evented) {
         this._source = Source.create(id, options, dispatcher, this);
         this._tiles = {};
         this._cache = new Cache(0, this.unloadTile.bind(this));
+        this._timers = {};
+        this._cacheTimers = {};
         this._isIdRenderable = this._isIdRenderable.bind(this);
     }
     if (Evented)
@@ -33042,14 +33499,17 @@ var SourceCache = function (Evented) {
         var this$1 = this;
         this._cache.reset();
         for (var i in this._tiles) {
-            var tile = this$1._tiles[i];
-            if (tile.state !== 'loading') {
-                tile.state = 'reloading';
-            }
-            this$1.loadTile(this$1._tiles[i], this$1._tileLoaded.bind(this$1, this$1._tiles[i]));
+            this$1.reloadTile(i, 'reloading');
         }
     };
-    SourceCache.prototype._tileLoaded = function _tileLoaded(tile, err) {
+    SourceCache.prototype.reloadTile = function reloadTile(id, state) {
+        var tile = this._tiles[id];
+        if (tile.state !== 'loading') {
+            tile.state = state;
+        }
+        this.loadTile(tile, this._tileLoaded.bind(this, tile, id));
+    };
+    SourceCache.prototype._tileLoaded = function _tileLoaded(tile, id, err) {
         if (err) {
             tile.state = 'errored';
             this._source.fire('error', {
@@ -33060,6 +33520,7 @@ var SourceCache = function (Evented) {
         }
         tile.sourceCache = this;
         tile.timeAdded = new Date().getTime();
+        this._setTileReloadTimer(id, tile);
         this._source.fire('data', {
             tile: tile,
             coord: tile.coord,
@@ -33165,18 +33626,22 @@ var SourceCache = function (Evented) {
             }
         }
         var parentsForFading = {};
-        var ids = Object.keys(retain);
-        for (var k = 0; k < ids.length; k++) {
-            var id = ids[k];
-            coord = TileCoord.fromID(id);
-            tile = this$1._tiles[id];
-            if (tile && tile.fadeEndTime >= Date.now()) {
-                if (this$1.findLoadedChildren(coord, maxCoveringZoom, retain)) {
-                    retain[id] = true;
-                }
-                parentTile = this$1.findLoadedParent(coord, minCoveringZoom, parentsForFading);
-                if (parentTile) {
-                    this$1.addTile(parentTile.coord);
+        if (isRasterType(this._source.type)) {
+            var ids = Object.keys(retain);
+            for (var k = 0; k < ids.length; k++) {
+                var id = ids[k];
+                coord = TileCoord.fromID(id);
+                tile = this$1._tiles[id];
+                if (!tile)
+                    continue;
+                if (typeof tile.fadeEndTime === 'undefined' || tile.fadeEndTime >= Date.now()) {
+                    if (this$1.findLoadedChildren(coord, maxCoveringZoom, retain)) {
+                        retain[id] = true;
+                    }
+                    parentTile = this$1.findLoadedParent(coord, minCoveringZoom, parentsForFading);
+                    if (parentTile) {
+                        this$1.addTile(parentTile.coord);
+                    }
                 }
             }
         }
@@ -33205,13 +33670,18 @@ var SourceCache = function (Evented) {
             tile = this._cache.get(wrapped.id);
             if (tile) {
                 tile.redoPlacement(this._source);
+                if (this._cacheTimers[wrapped.id]) {
+                    clearTimeout(this._cacheTimers[wrapped.id]);
+                    this._cacheTimers[wrapped.id] = undefined;
+                    this._setTileReloadTimer(wrapped.id, tile);
+                }
             }
         }
         if (!tile) {
             var zoom = coord.z;
             var overscaling = zoom > this._source.maxzoom ? Math.pow(2, zoom - this._source.maxzoom) : 1;
             tile = new Tile(wrapped, this._source.tileSize * overscaling, this._source.maxzoom);
-            this.loadTile(tile, this._tileLoaded.bind(this, tile));
+            this.loadTile(tile, this._tileLoaded.bind(this, tile, coord.id));
         }
         tile.uses++;
         this._tiles[coord.id] = tile;
@@ -33222,12 +33692,36 @@ var SourceCache = function (Evented) {
         });
         return tile;
     };
+    SourceCache.prototype._setTileReloadTimer = function _setTileReloadTimer(id, tile) {
+        var this$1 = this;
+        var tileExpires = tile.getExpiry();
+        if (tileExpires) {
+            this._timers[id] = setTimeout(function () {
+                this$1.reloadTile(id, 'expired');
+                this$1._timers[id] = undefined;
+            }, tileExpires - new Date().getTime());
+        }
+    };
+    SourceCache.prototype._setCacheInvalidationTimer = function _setCacheInvalidationTimer(id, tile) {
+        var this$1 = this;
+        var tileExpires = tile.getExpiry();
+        if (tileExpires) {
+            this._cacheTimers[id] = setTimeout(function () {
+                this$1._cache.remove(id);
+                this$1._cacheTimers[id] = undefined;
+            }, tileExpires - new Date().getTime());
+        }
+    };
     SourceCache.prototype.removeTile = function removeTile(id) {
         var tile = this._tiles[id];
         if (!tile)
             return;
         tile.uses--;
         delete this._tiles[id];
+        if (this._timers[id]) {
+            clearTimeout(this._timers[id]);
+            this._timers[id] = undefined;
+        }
         this._source.fire('data', {
             tile: tile,
             coord: tile.coord,
@@ -33236,7 +33730,9 @@ var SourceCache = function (Evented) {
         if (tile.uses > 0)
             return;
         if (tile.hasData()) {
-            this._cache.add(tile.coord.wrapped().id, tile);
+            var wrappedId = tile.coord.wrapped().id;
+            this._cache.add(wrappedId, tile);
+            this._setCacheInvalidationTimer(wrappedId, tile);
         } else {
             tile.aborted = true;
             this.abortTile(tile);
@@ -33326,8 +33822,11 @@ function coordinateToTilePoint(tileCoord, sourceMaxZoom, coord) {
 function compareKeyZoom(a, b) {
     return a % 32 - b % 32;
 }
+function isRasterType(type) {
+    return type === 'raster' || type === 'image' || type === 'video';
+}
 module.exports = SourceCache;
-},{"../data/extent":82,"../geo/coordinate":89,"../util/evented":187,"../util/lru_cache":193,"../util/util":198,"./source":119,"./tile":121,"./tile_coord":122}],121:[function(require,module,exports){
+},{"../data/extent":85,"../geo/coordinate":92,"../util/evented":192,"../util/lru_cache":198,"../util/util":203,"./source":124,"./tile":126,"./tile_coord":127}],126:[function(require,module,exports){
 'use strict';
 var util = require('../util/util');
 var Bucket = require('../data/bucket');
@@ -33347,6 +33846,8 @@ var Tile = function Tile(coord, size, sourceMaxZoom) {
     this.tileSize = size;
     this.sourceMaxZoom = sourceMaxZoom;
     this.buckets = {};
+    this.expires = null;
+    this.cacheControl = null;
     this.state = 'loading';
 };
 Tile.prototype.registerFadeDuration = function registerFadeDuration(animationLoop, duration) {
@@ -33404,11 +33905,15 @@ Tile.prototype.unloadVectorData = function unloadVectorData() {
     this.state = 'unloaded';
 };
 Tile.prototype.redoPlacement = function redoPlacement(source) {
+    var this$1 = this;
     if (source.type !== 'vector' && source.type !== 'geojson') {
         return;
     }
-    if (this.state !== 'loaded' || this.state === 'reloading') {
+    if (this.state !== 'loaded') {
         this.redoWhenDone = true;
+        return;
+    }
+    if (!this.collisionTile) {
         return;
     }
     this.state = 'reloading';
@@ -33419,22 +33924,21 @@ Tile.prototype.redoPlacement = function redoPlacement(source) {
         angle: source.map.transform.angle,
         pitch: source.map.transform.pitch,
         showCollisionBoxes: source.map.showCollisionBoxes
-    }, done.bind(this), this.workerID);
-    function done(_, data) {
-        this.reloadSymbolData(data, source.map.style);
+    }, function (_, data) {
+        this$1.reloadSymbolData(data, source.map.style);
         source.fire('data', {
-            tile: this,
-            coord: this.coord,
+            tile: this$1,
+            coord: this$1.coord,
             dataType: 'tile'
         });
         if (source.map)
             source.map.painter.tileExtentVAO.vao = null;
-        this.state = 'loaded';
-        if (this.redoWhenDone) {
-            this.redoPlacement(source);
-            this.redoWhenDone = false;
+        this$1.state = 'loaded';
+        if (this$1.redoWhenDone) {
+            this$1.redoWhenDone = false;
+            this$1.redoPlacement(source);
         }
-    }
+    }, this.workerID);
 };
 Tile.prototype.getBucket = function getBucket(layer) {
     return this.buckets[layer.id];
@@ -33465,10 +33969,25 @@ Tile.prototype.querySourceFeatures = function querySourceFeatures(result, params
     }
 };
 Tile.prototype.hasData = function hasData() {
-    return this.state === 'loaded' || this.state === 'reloading';
+    return this.state === 'loaded' || this.state === 'reloading' || this.state === 'expired';
+};
+Tile.prototype.setExpiryData = function setExpiryData(data) {
+    if (data.cacheControl)
+        this.cacheControl = data.cacheControl;
+    if (data.expires)
+        this.expires = data.expires;
+};
+Tile.prototype.getExpiry = function getExpiry() {
+    if (this.cacheControl) {
+        var parsedCC = util.parseCacheControl(this.cacheControl);
+        if (parsedCC['max-age'])
+            return this.timeAdded + parsedCC['max-age'] * 1000;
+    } else if (this.expires) {
+        return new Date(this.expires).getTime();
+    }
 };
 module.exports = Tile;
-},{"../data/bucket":73,"../data/feature_index":83,"../symbol/collision_box":147,"../symbol/collision_tile":149,"../symbol/symbol_instances":158,"../symbol/symbol_quads":159,"../util/util":198,"../util/vectortile_to_geojson":199,"feature-filter":15,"pbf":204,"vector-tile":211}],122:[function(require,module,exports){
+},{"../data/bucket":76,"../data/feature_index":86,"../symbol/collision_box":152,"../symbol/collision_tile":154,"../symbol/symbol_instances":163,"../symbol/symbol_quads":164,"../util/util":203,"../util/vectortile_to_geojson":204,"feature-filter":18,"pbf":209,"vector-tile":216}],127:[function(require,module,exports){
 'use strict';
 var WhooTS = require('whoots-js');
 var Coordinate = require('../geo/coordinate');
@@ -33626,7 +34145,7 @@ function getQuadkey(z, x, y) {
     return quadkey;
 }
 module.exports = TileCoord;
-},{"../geo/coordinate":89,"whoots-js":220}],123:[function(require,module,exports){
+},{"../geo/coordinate":92,"whoots-js":225}],128:[function(require,module,exports){
 'use strict';
 var Evented = require('../util/evented');
 var util = require('../util/util');
@@ -33694,7 +34213,7 @@ var VectorTileSource = function (Evented) {
             pitch: this.map.transform.pitch,
             showCollisionBoxes: this.map.showCollisionBoxes
         };
-        if (!tile.workerID) {
+        if (!tile.workerID || tile.state === 'expired') {
             tile.workerID = this.dispatcher.send('loadTile', params, done.bind(this));
         } else if (tile.state === 'loading') {
             tile.reloadCallback = callback;
@@ -33707,6 +34226,7 @@ var VectorTileSource = function (Evented) {
             if (err) {
                 return callback(err);
             }
+            tile.setExpiryData(data);
             tile.loadVectorData(data, this.map.painter);
             if (tile.redoWhenDone) {
                 tile.redoWhenDone = false;
@@ -33737,7 +34257,7 @@ var VectorTileSource = function (Evented) {
     return VectorTileSource;
 }(Evented);
 module.exports = VectorTileSource;
-},{"../util/evented":187,"../util/mapbox":194,"../util/util":198,"./load_tilejson":115}],124:[function(require,module,exports){
+},{"../util/evented":192,"../util/mapbox":199,"../util/util":203,"./load_tilejson":119}],129:[function(require,module,exports){
 'use strict';
 var ajax = require('../util/ajax');
 var vt = require('vector-tile');
@@ -33769,7 +34289,12 @@ VectorTileWorkerSource.prototype.loadTile = function loadTile(params, callback) 
         workerTile.parse(vectorTile, this.layerIndex, this.actor, function (err, result, transferrables) {
             if (err)
                 return callback(err);
-            callback(null, util.extend({ rawTileData: vectorTile.rawData }, result), transferrables);
+            var cacheControl = {};
+            if (vectorTile.expires)
+                cacheControl.expires = vectorTile.expires;
+            if (vectorTile.cacheControl)
+                cacheControl.cacheControl = vectorTile.cacheControl;
+            callback(null, util.extend({ rawTileData: vectorTile.rawData }, result, cacheControl), transferrables);
         });
         this.loaded[source] = this.loaded[source] || {};
         this.loaded[source][uid] = workerTile;
@@ -33812,12 +34337,14 @@ VectorTileWorkerSource.prototype.loadVectorData = function loadVectorData(params
     return function abort() {
         xhr.abort();
     };
-    function done(err, arrayBuffer) {
+    function done(err, response) {
         if (err) {
             return callback(err);
         }
-        var vectorTile = new vt.VectorTile(new Protobuf(arrayBuffer));
-        vectorTile.rawData = arrayBuffer;
+        var vectorTile = new vt.VectorTile(new Protobuf(response.data));
+        vectorTile.rawData = response.data;
+        vectorTile.cacheControl = response.cacheControl;
+        vectorTile.expires = response.expires;
         callback(err, vectorTile);
     }
 };
@@ -33834,7 +34361,7 @@ VectorTileWorkerSource.prototype.redoPlacement = function redoPlacement(params, 
     }
 };
 module.exports = VectorTileWorkerSource;
-},{"../util/ajax":178,"../util/util":198,"./worker_tile":127,"pbf":204,"vector-tile":211}],125:[function(require,module,exports){
+},{"../util/ajax":183,"../util/util":203,"./worker_tile":132,"pbf":209,"vector-tile":216}],130:[function(require,module,exports){
 'use strict';
 var ajax = require('../util/ajax');
 var ImageSource = require('./image_source');
@@ -33842,6 +34369,7 @@ var VideoSource = function (ImageSource) {
     function VideoSource(id, options, dispatcher, eventedParent) {
         ImageSource.call(this, id, options, dispatcher, eventedParent);
         this.roundZoom = true;
+        this.type = 'video';
         this.options = options;
     }
     if (ImageSource)
@@ -33899,12 +34427,13 @@ var VideoSource = function (ImageSource) {
     return VideoSource;
 }(ImageSource);
 module.exports = VideoSource;
-},{"../util/ajax":178,"./image_source":114}],126:[function(require,module,exports){
+},{"../util/ajax":183,"./image_source":118}],131:[function(require,module,exports){
 'use strict';
 var Actor = require('../util/actor');
 var StyleLayerIndex = require('../style/style_layer_index');
 var VectorTileWorkerSource = require('./vector_tile_worker_source');
 var GeoJSONWorkerSource = require('./geojson_worker_source');
+var globalRTLTextPlugin = require('./rtl_text_plugin');
 var Worker = function Worker(self) {
     var this$1 = this;
     this.self = self;
@@ -33920,6 +34449,13 @@ var Worker = function Worker(self) {
             throw new Error('Worker source with name "' + name + '" already registered.');
         }
         this$1.workerSourceTypes[name] = WorkerSource;
+    };
+    this.self.registerRTLTextPlugin = function (rtlTextPlugin) {
+        if (globalRTLTextPlugin.applyArabicShaping || globalRTLTextPlugin.processBidirectionalText) {
+            throw new Error('RTL text plugin already registered.');
+        }
+        globalRTLTextPlugin['applyArabicShaping'] = rtlTextPlugin.applyArabicShaping;
+        globalRTLTextPlugin['processBidirectionalText'] = rtlTextPlugin.processBidirectionalText;
     };
 };
 Worker.prototype.setLayers = function setLayers(mapId, layers) {
@@ -33957,6 +34493,15 @@ Worker.prototype.loadWorkerSource = function loadWorkerSource(map, params, callb
         callback(e);
     }
 };
+Worker.prototype.loadRTLTextPlugin = function loadRTLTextPlugin(map, pluginURL, callback) {
+    try {
+        if (!globalRTLTextPlugin.applyArabicShaping && !globalRTLTextPlugin.processBidirectionalText) {
+            this.self.importScripts(pluginURL);
+        }
+    } catch (e) {
+        callback(e);
+    }
+};
 Worker.prototype.getLayerIndex = function getLayerIndex(mapId) {
     var layerIndexes = this.layerIndexes[mapId];
     if (!layerIndexes) {
@@ -33981,7 +34526,7 @@ Worker.prototype.getWorkerSource = function getWorkerSource(mapId, type) {
 module.exports = function createWorker(self) {
     return new Worker(self);
 };
-},{"../style/style_layer_index":140,"../util/actor":177,"./geojson_worker_source":112,"./vector_tile_worker_source":124}],127:[function(require,module,exports){
+},{"../style/style_layer_index":145,"../util/actor":182,"./geojson_worker_source":116,"./rtl_text_plugin":123,"./vector_tile_worker_source":129}],132:[function(require,module,exports){
 'use strict';
 var FeatureIndex = require('../data/feature_index');
 var CollisionTile = require('../symbol/collision_tile');
@@ -34165,7 +34710,7 @@ function serializeBuckets(buckets, transferables) {
     });
 }
 module.exports = WorkerTile;
-},{"../data/feature_index":83,"../symbol/collision_box":147,"../symbol/collision_tile":149,"../symbol/symbol_instances":158,"../symbol/symbol_quads":159,"../util/dictionary_coder":184,"../util/util":198}],128:[function(require,module,exports){
+},{"../data/feature_index":86,"../symbol/collision_box":152,"../symbol/collision_tile":154,"../symbol/symbol_instances":163,"../symbol/symbol_quads":164,"../util/dictionary_coder":189,"../util/util":203}],133:[function(require,module,exports){
 'use strict';
 var AnimationLoop = function AnimationLoop() {
     this.n = 0;
@@ -34190,7 +34735,7 @@ AnimationLoop.prototype.cancel = function cancel(n) {
     });
 };
 module.exports = AnimationLoop;
-},{}],129:[function(require,module,exports){
+},{}],134:[function(require,module,exports){
 'use strict';
 var Evented = require('../util/evented');
 var ajax = require('../util/ajax');
@@ -34271,7 +34816,7 @@ var ImageSprite = function (Evented) {
     return ImageSprite;
 }(Evented);
 module.exports = ImageSprite;
-},{"../util/ajax":178,"../util/browser":179,"../util/evented":187,"../util/mapbox":194}],130:[function(require,module,exports){
+},{"../util/ajax":183,"../util/browser":184,"../util/evented":192,"../util/mapbox":199}],135:[function(require,module,exports){
 'use strict';
 var styleSpec = require('./style_spec');
 var util = require('../util/util');
@@ -34403,7 +34948,7 @@ var Light = function (Evented) {
     return Light;
 }(Evented);
 module.exports = Light;
-},{"../util/evented":187,"../util/util":198,"./style_declaration":133,"./style_spec":141,"./style_transition":142,"./validate_style":143}],131:[function(require,module,exports){
+},{"../util/evented":192,"../util/util":203,"./style_declaration":138,"./style_spec":146,"./style_transition":147,"./validate_style":148}],136:[function(require,module,exports){
 'use strict';
 var parseColorString = require('csscolorparser').parseCSSColor;
 var util = require('../util/util');
@@ -34442,7 +34987,7 @@ module.exports = function parseColor(input) {
         throw new Error('Invalid color ' + input);
     }
 };
-},{"../util/util":198,"csscolorparser":12,"mapbox-gl-function":42}],132:[function(require,module,exports){
+},{"../util/util":203,"csscolorparser":13,"mapbox-gl-function":45}],137:[function(require,module,exports){
 'use strict';
 var Evented = require('../util/evented');
 var StyleLayer = require('./style_layer');
@@ -34466,6 +35011,7 @@ var MapboxGLFunction = require('mapbox-gl-function');
 var getWorkerPool = require('../global_worker_pool');
 var deref = require('mapbox-gl-style-spec/lib/deref');
 var diff = require('mapbox-gl-style-spec/lib/diff');
+var rtlTextPlugin = require('../source/rtl_text_plugin');
 var supportedDiffOperations = util.pick(diff.operations, [
     'addLayer',
     'removeLayer',
@@ -34503,6 +35049,13 @@ var Style = function (Evented) {
         options = util.extend({ validate: typeof stylesheet === 'string' ? !mapbox.isMapboxURL(stylesheet) : true }, options);
         this.setEventedParent(map);
         this.fire('dataloading', { dataType: 'style' });
+        var self = this;
+        rtlTextPlugin.registerForPluginAvailability(function (pluginBlobURL) {
+            self.dispatcher.broadcast('loadRTLTextPlugin', pluginBlobURL, rtlTextPlugin.errorCallback);
+            for (var id in self.sourceCaches) {
+                self.sourceCaches[id].reload();
+            }
+        });
         var stylesheetLoaded = function (err, stylesheet) {
             if (err) {
                 this$1.fire('error', { error: err });
@@ -34739,7 +35292,8 @@ var Style = function (Evented) {
             'raster',
             'geojson',
             'video',
-            'image'
+            'image',
+            'canvas'
         ];
         var shouldValidate = builtIns.indexOf(source.type) >= 0;
         if (shouldValidate && this._validate(validateStyle.source, 'sources.' + id, source, null, options))
@@ -34789,8 +35343,9 @@ var Style = function (Evented) {
         this._order.splice(index, 0, id);
         this._layers[id] = layer;
         if (this._removedLayers[id] && layer.source) {
+            var removed = this._removedLayers[id];
             delete this._removedLayers[id];
-            this._updatedSources[layer.source] = 'clear';
+            this._updatedSources[layer.source] = removed.type !== layer.type ? 'clear' : 'reload';
         }
         this._updateLayer(layer);
         if (layer.type === 'symbol') {
@@ -34831,7 +35386,7 @@ var Style = function (Evented) {
             this._updatedSymbolOrder = true;
         }
         this._changed = true;
-        this._removedLayers[id] = true;
+        this._removedLayers[id] = layer;
         delete this._layers[id];
         delete this._updatedLayers[id];
         delete this._updatedPaintProps[id];
@@ -35107,7 +35662,7 @@ var Style = function (Evented) {
     return Style;
 }(Evented);
 module.exports = Style;
-},{"../global_worker_pool":93,"../render/line_atlas":106,"../source/query_features":117,"../source/source":119,"../source/source_cache":120,"../symbol/glyph_source":152,"../symbol/sprite_atlas":157,"../util/ajax":178,"../util/browser":179,"../util/dispatcher":185,"../util/evented":187,"../util/mapbox":194,"../util/util":198,"./animation_loop":128,"./image_sprite":129,"./light":130,"./style_layer":134,"./style_spec":141,"./validate_style":143,"mapbox-gl-function":42,"mapbox-gl-style-spec/lib/deref":43,"mapbox-gl-style-spec/lib/diff":44}],133:[function(require,module,exports){
+},{"../global_worker_pool":96,"../render/line_atlas":109,"../source/query_features":121,"../source/rtl_text_plugin":123,"../source/source":124,"../source/source_cache":125,"../symbol/glyph_source":157,"../symbol/sprite_atlas":162,"../util/ajax":183,"../util/browser":184,"../util/dispatcher":190,"../util/evented":192,"../util/mapbox":199,"../util/util":203,"./animation_loop":133,"./image_sprite":134,"./light":135,"./style_layer":139,"./style_spec":146,"./validate_style":148,"mapbox-gl-function":45,"mapbox-gl-style-spec/lib/deref":46,"mapbox-gl-style-spec/lib/diff":47}],138:[function(require,module,exports){
 'use strict';
 var MapboxGLFunction = require('mapbox-gl-function');
 var parseColor = require('./parse_color');
@@ -35161,7 +35716,7 @@ StyleDeclaration.prototype.calculateInterpolationT = function calculateInterpola
     return this.functionInterpolationT(globalProperties && globalProperties.zoom, featureProperties || {});
 };
 module.exports = StyleDeclaration;
-},{"../util/util":198,"./parse_color":131,"mapbox-gl-function":42}],134:[function(require,module,exports){
+},{"../util/util":203,"./parse_color":136,"mapbox-gl-function":45}],139:[function(require,module,exports){
 'use strict';
 var util = require('../util/util');
 var StyleTransition = require('./style_transition');
@@ -35448,7 +36003,7 @@ StyleLayer.create = function (layer) {
 function getDeclarationValue(declaration) {
     return declaration.value;
 }
-},{"../util/evented":187,"../util/util":198,"./parse_color":131,"./style_declaration":133,"./style_layer/circle_style_layer":135,"./style_layer/fill_extrusion_style_layer":136,"./style_layer/fill_style_layer":137,"./style_layer/line_style_layer":138,"./style_layer/symbol_style_layer":139,"./style_spec":141,"./style_transition":142,"./validate_style":143}],135:[function(require,module,exports){
+},{"../util/evented":192,"../util/util":203,"./parse_color":136,"./style_declaration":138,"./style_layer/circle_style_layer":140,"./style_layer/fill_extrusion_style_layer":141,"./style_layer/fill_style_layer":142,"./style_layer/line_style_layer":143,"./style_layer/symbol_style_layer":144,"./style_spec":146,"./style_transition":147,"./validate_style":148}],140:[function(require,module,exports){
 'use strict';
 var StyleLayer = require('../style_layer');
 var CircleBucket = require('../../data/bucket/circle_bucket');
@@ -35466,7 +36021,7 @@ var CircleStyleLayer = function (StyleLayer) {
     return CircleStyleLayer;
 }(StyleLayer);
 module.exports = CircleStyleLayer;
-},{"../../data/bucket/circle_bucket":74,"../style_layer":134}],136:[function(require,module,exports){
+},{"../../data/bucket/circle_bucket":77,"../style_layer":139}],141:[function(require,module,exports){
 'use strict';
 var StyleLayer = require('../style_layer');
 var FillExtrusionBucket = require('../../data/bucket/fill_extrusion_bucket');
@@ -35491,7 +36046,7 @@ var FillExtrusionStyleLayer = function (StyleLayer) {
     return FillExtrusionStyleLayer;
 }(StyleLayer);
 module.exports = FillExtrusionStyleLayer;
-},{"../../data/bucket/fill_extrusion_bucket":76,"../style_layer":134}],137:[function(require,module,exports){
+},{"../../data/bucket/fill_extrusion_bucket":79,"../style_layer":139}],142:[function(require,module,exports){
 'use strict';
 var StyleLayer = require('../style_layer');
 var FillBucket = require('../../data/bucket/fill_bucket');
@@ -35504,11 +36059,21 @@ var FillStyleLayer = function (StyleLayer) {
     FillStyleLayer.prototype = Object.create(StyleLayer && StyleLayer.prototype);
     FillStyleLayer.prototype.constructor = FillStyleLayer;
     FillStyleLayer.prototype.getPaintValue = function getPaintValue(name, globalProperties, featureProperties) {
-        if (name === 'fill-outline-color' && this.getPaintProperty('fill-outline-color') === undefined) {
-            return StyleLayer.prototype.getPaintValue.call(this, 'fill-color', globalProperties, featureProperties);
-        } else {
-            return StyleLayer.prototype.getPaintValue.call(this, name, globalProperties, featureProperties);
+        var this$1 = this;
+        if (name === 'fill-outline-color') {
+            if (this.getPaintProperty('fill-outline-color') === undefined) {
+                return StyleLayer.prototype.getPaintValue.call(this, 'fill-color', globalProperties, featureProperties);
+            }
+            var transition = this._paintTransitions['fill-outline-color'];
+            while (transition) {
+                var declaredValue = transition && transition.declaration && transition.declaration.value;
+                if (!declaredValue) {
+                    return StyleLayer.prototype.getPaintValue.call(this$1, 'fill-color', globalProperties, featureProperties);
+                }
+                transition = transition.oldTransition;
+            }
         }
+        return StyleLayer.prototype.getPaintValue.call(this, name, globalProperties, featureProperties);
     };
     FillStyleLayer.prototype.getPaintValueStopZoomLevels = function getPaintValueStopZoomLevels(name) {
         if (name === 'fill-outline-color' && this.getPaintProperty('fill-outline-color') === undefined) {
@@ -35544,7 +36109,7 @@ var FillStyleLayer = function (StyleLayer) {
     return FillStyleLayer;
 }(StyleLayer);
 module.exports = FillStyleLayer;
-},{"../../data/bucket/fill_bucket":75,"../style_layer":134}],138:[function(require,module,exports){
+},{"../../data/bucket/fill_bucket":78,"../style_layer":139}],143:[function(require,module,exports){
 'use strict';
 var StyleLayer = require('../style_layer');
 var LineBucket = require('../../data/bucket/line_bucket');
@@ -35572,7 +36137,7 @@ var LineStyleLayer = function (StyleLayer) {
     return LineStyleLayer;
 }(StyleLayer);
 module.exports = LineStyleLayer;
-},{"../../data/bucket/line_bucket":77,"../../util/util":198,"../style_layer":134}],139:[function(require,module,exports){
+},{"../../data/bucket/line_bucket":80,"../../util/util":203,"../style_layer":139}],144:[function(require,module,exports){
 'use strict';
 var StyleLayer = require('../style_layer');
 var SymbolBucket = require('../../data/bucket/symbol_bucket');
@@ -35605,7 +36170,7 @@ var SymbolStyleLayer = function (StyleLayer) {
     return SymbolStyleLayer;
 }(StyleLayer);
 module.exports = SymbolStyleLayer;
-},{"../../data/bucket/symbol_bucket":78,"../style_layer":134}],140:[function(require,module,exports){
+},{"../../data/bucket/symbol_bucket":81,"../style_layer":139}],145:[function(require,module,exports){
 'use strict';
 var StyleLayer = require('./style_layer');
 var util = require('../util/util');
@@ -35671,10 +36236,10 @@ StyleLayerIndex.prototype.update = function update(layerConfigs, removedIds, sym
     }
 };
 module.exports = StyleLayerIndex;
-},{"../util/util":198,"./style_layer":134,"feature-filter":15,"mapbox-gl-style-spec/lib/group_by_layout":46}],141:[function(require,module,exports){
+},{"../util/util":203,"./style_layer":139,"feature-filter":18,"mapbox-gl-style-spec/lib/group_by_layout":49}],146:[function(require,module,exports){
 'use strict';
 module.exports = require('mapbox-gl-style-spec/reference/latest.min');
-},{"mapbox-gl-style-spec/reference/latest.min":69}],142:[function(require,module,exports){
+},{"mapbox-gl-style-spec/reference/latest.min":72}],147:[function(require,module,exports){
 'use strict';
 var util = require('../util/util');
 var interpolate = require('../util/interpolate');
@@ -35746,7 +36311,7 @@ function interpZoomTransitioned(from, to, t) {
         t: t
     };
 }
-},{"../util/interpolate":190,"../util/util":198}],143:[function(require,module,exports){
+},{"../util/interpolate":195,"../util/util":203}],148:[function(require,module,exports){
 'use strict';
 module.exports = require('mapbox-gl-style-spec/lib/validate_style.min');
 module.exports.emitErrors = function (emitter, errors) {
@@ -35759,7 +36324,7 @@ module.exports.emitErrors = function (emitter, errors) {
         return false;
     }
 };
-},{"mapbox-gl-style-spec/lib/validate_style.min":68}],144:[function(require,module,exports){
+},{"mapbox-gl-style-spec/lib/validate_style.min":71}],149:[function(require,module,exports){
 'use strict';
 var Point = require('point-geometry');
 var Anchor = function (Point) {
@@ -35780,7 +36345,7 @@ var Anchor = function (Point) {
     return Anchor;
 }(Point);
 module.exports = Anchor;
-},{"point-geometry":205}],145:[function(require,module,exports){
+},{"point-geometry":210}],150:[function(require,module,exports){
 'use strict';
 module.exports = checkMaxAngle;
 function checkMaxAngle(line, anchor, labelLength, windowSize, maxAngle) {
@@ -35823,7 +36388,7 @@ function checkMaxAngle(line, anchor, labelLength, windowSize, maxAngle) {
     }
     return true;
 }
-},{}],146:[function(require,module,exports){
+},{}],151:[function(require,module,exports){
 'use strict';
 var Point = require('point-geometry');
 module.exports = clipLine;
@@ -35872,7 +36437,7 @@ function clipLine(lines, x1, y1, x2, y2) {
     }
     return clippedLines;
 }
-},{"point-geometry":205}],147:[function(require,module,exports){
+},{"point-geometry":210}],152:[function(require,module,exports){
 'use strict';
 var createStructArrayType = require('../util/struct_array');
 var Point = require('point-geometry');
@@ -35946,7 +36511,7 @@ Object.defineProperty(CollisionBoxArray.prototype.StructType.prototype, 'anchorP
     }
 });
 module.exports = CollisionBoxArray;
-},{"../util/struct_array":196,"point-geometry":205}],148:[function(require,module,exports){
+},{"../util/struct_array":201,"point-geometry":210}],153:[function(require,module,exports){
 'use strict';
 var CollisionFeature = function CollisionFeature(collisionBoxArray, line, anchor, featureIndex, sourceLayerIndex, bucketIndex, shaped, boxScale, padding, alignLine, straight) {
     var y1 = shaped.top * boxScale - padding;
@@ -36011,7 +36576,7 @@ CollisionFeature.prototype._addLineCollisionBoxes = function _addLineCollisionBo
     return bboxes;
 };
 module.exports = CollisionFeature;
-},{}],149:[function(require,module,exports){
+},{}],154:[function(require,module,exports){
 'use strict';
 var Point = require('point-geometry');
 var EXTENT = require('../data/extent');
@@ -36237,7 +36802,7 @@ CollisionTile.prototype.insertCollisionFeature = function insertCollisionFeature
     }
 };
 module.exports = CollisionTile;
-},{"../data/extent":82,"../util/intersection_tests":191,"grid-index":26,"point-geometry":205}],150:[function(require,module,exports){
+},{"../data/extent":85,"../util/intersection_tests":196,"grid-index":29,"point-geometry":210}],155:[function(require,module,exports){
 'use strict';
 var interpolate = require('../util/interpolate');
 var Anchor = require('../symbol/anchor');
@@ -36282,7 +36847,7 @@ function resample(line, offset, spacing, angleWindowSize, maxAngle, labelLength,
     }
     return anchors;
 }
-},{"../symbol/anchor":144,"../util/interpolate":190,"./check_max_angle":145}],151:[function(require,module,exports){
+},{"../symbol/anchor":149,"../util/interpolate":195,"./check_max_angle":150}],156:[function(require,module,exports){
 'use strict';
 var ShelfPack = require('shelf-pack');
 var util = require('../util/util');
@@ -36413,7 +36978,7 @@ GlyphAtlas.prototype.updateTexture = function updateTexture(gl) {
     }
 };
 module.exports = GlyphAtlas;
-},{"../util/util":198,"shelf-pack":207}],152:[function(require,module,exports){
+},{"../util/util":203,"shelf-pack":212}],157:[function(require,module,exports){
 'use strict';
 var normalizeURL = require('../util/mapbox').normalizeGlyphsURL;
 var ajax = require('../util/ajax');
@@ -36505,8 +37070,8 @@ GlyphSource.prototype.loadRange = function loadRange(fontstack, range, callback)
         loading[range] = [callback];
         var rangeName = range * 256 + '-' + (range * 256 + 255);
         var url = glyphUrl(fontstack, rangeName, this.url);
-        ajax.getArrayBuffer(url, function (err, data) {
-            var glyphs = !err && new Glyphs(new Protobuf(data));
+        ajax.getArrayBuffer(url, function (err, response) {
+            var glyphs = !err && new Glyphs(new Protobuf(response.data));
             for (var i = 0; i < loading[range].length; i++) {
                 loading[range][i](err, range, glyphs);
             }
@@ -36522,7 +37087,7 @@ function glyphUrl(fontstack, range, url, subdomains) {
     return url.replace('{s}', subdomains[fontstack.length % subdomains.length]).replace('{fontstack}', fontstack).replace('{range}', range);
 }
 module.exports = GlyphSource;
-},{"../symbol/glyph_atlas":151,"../util/ajax":178,"../util/glyphs":189,"../util/mapbox":194,"../util/verticalize_punctuation":200,"pbf":204}],153:[function(require,module,exports){
+},{"../symbol/glyph_atlas":156,"../util/ajax":183,"../util/glyphs":194,"../util/mapbox":199,"../util/verticalize_punctuation":205,"pbf":209}],158:[function(require,module,exports){
 'use strict';
 module.exports = function (features) {
     var leftIndex = {};
@@ -36583,7 +37148,7 @@ module.exports = function (features) {
         return f.geometry;
     });
 };
-},{}],154:[function(require,module,exports){
+},{}],159:[function(require,module,exports){
 'use strict';
 var Point = require('point-geometry');
 module.exports = {
@@ -36759,7 +37324,7 @@ function getSegmentGlyphs(glyphs, anchor, offset, line, segment, forward) {
     }
     return placementScale;
 }
-},{"point-geometry":205}],155:[function(require,module,exports){
+},{"point-geometry":210}],160:[function(require,module,exports){
 'use strict';
 var resolveTokens = require('../util/token');
 module.exports = function resolveText(feature, layout) {
@@ -36776,10 +37341,11 @@ module.exports = function resolveText(feature, layout) {
     }
     return text;
 };
-},{"../util/token":197}],156:[function(require,module,exports){
+},{"../util/token":202}],161:[function(require,module,exports){
 'use strict';
 var scriptDetection = require('../util/script_detection');
 var verticalizePunctuation = require('../util/verticalize_punctuation');
+var rtlTextPlugin = require('../source/rtl_text_plugin');
 var WritingMode = {
     horizontal: 1,
     vertical: 2
@@ -36805,7 +37371,6 @@ function Shaping(positionedGlyphs, text, top, bottom, left, right, writingMode) 
     this.right = right;
     this.writingMode = writingMode;
 }
-var newLine = 10;
 function breakLines(text, lineBreakPoints) {
     var lines = [];
     var start = 0;
@@ -36820,12 +37385,17 @@ function breakLines(text, lineBreakPoints) {
     return lines;
 }
 function shapeText(text, glyphs, maxWidth, lineHeight, horizontalAlign, verticalAlign, justify, spacing, translate, verticalHeight, writingMode) {
-    text = text.trim();
+    var logicalInput = text.trim();
     if (writingMode === WritingMode.vertical)
-        text = verticalizePunctuation(text);
+        logicalInput = verticalizePunctuation(logicalInput);
     var positionedGlyphs = [];
-    var shaping = new Shaping(positionedGlyphs, text, translate[1], translate[1], translate[0], translate[0], writingMode);
-    var lines = writingMode === WritingMode.horizontal && maxWidth ? breakLines(text, determineLineBreaks(text, spacing, maxWidth, glyphs)) : [text];
+    var shaping = new Shaping(positionedGlyphs, logicalInput, translate[1], translate[1], translate[0], translate[0], writingMode);
+    var lines;
+    if (rtlTextPlugin.processBidirectionalText) {
+        lines = rtlTextPlugin.processBidirectionalText(logicalInput, determineLineBreaks(logicalInput, spacing, maxWidth, glyphs));
+    } else {
+        lines = breakLines(logicalInput, determineLineBreaks(logicalInput, spacing, maxWidth, glyphs));
+    }
     shapeLines(shaping, glyphs, lines, lineHeight, horizontalAlign, verticalAlign, justify, translate, writingMode, spacing, verticalHeight);
     if (!positionedGlyphs.length)
         return false;
@@ -36840,6 +37410,7 @@ var whitespace = {
     32: true
 };
 var breakable = {
+    10: true,
     32: true,
     38: true,
     40: true,
@@ -36854,7 +37425,6 @@ var breakable = {
     8211: true,
     8231: true
 };
-breakable[newLine] = true;
 function determineAverageLineWidth(logicalInput, spacing, maxWidth, glyphs) {
     var totalWidth = 0;
     for (var index in logicalInput) {
@@ -37010,7 +37580,7 @@ function PositionedIcon(image, top, bottom, left, right) {
     this.left = left;
     this.right = right;
 }
-},{"../util/script_detection":195,"../util/verticalize_punctuation":200}],157:[function(require,module,exports){
+},{"../source/rtl_text_plugin":123,"../util/script_detection":200,"../util/verticalize_punctuation":205}],162:[function(require,module,exports){
 'use strict';
 var ShelfPack = require('shelf-pack');
 var browser = require('../util/browser');
@@ -37175,7 +37745,7 @@ function copyBitmap(src, srcStride, srcX, srcY, dst, dstStride, dstX, dstY, widt
         }
     }
 }
-},{"../util/browser":179,"../util/util":198,"shelf-pack":207}],158:[function(require,module,exports){
+},{"../util/browser":184,"../util/util":203,"shelf-pack":212}],163:[function(require,module,exports){
 'use strict';
 var createStructArrayType = require('../util/struct_array');
 var Point = require('point-geometry');
@@ -37237,7 +37807,7 @@ Object.defineProperty(SymbolInstancesArray.prototype.StructType.prototype, 'anch
     }
 });
 module.exports = SymbolInstancesArray;
-},{"../util/struct_array":196,"point-geometry":205}],159:[function(require,module,exports){
+},{"../util/struct_array":201,"point-geometry":210}],164:[function(require,module,exports){
 'use strict';
 var createStructArrayType = require('../util/struct_array');
 var Point = require('point-geometry');
@@ -37340,7 +37910,7 @@ Object.defineProperty(SymbolQuadsArray.prototype.StructType.prototype, 'SymbolQu
     }
 });
 module.exports = SymbolQuadsArray;
-},{"../util/struct_array":196,"./quads":154,"point-geometry":205}],160:[function(require,module,exports){
+},{"../util/struct_array":201,"./quads":159,"point-geometry":210}],165:[function(require,module,exports){
 'use strict';
 var DOM = require('../util/dom');
 var Point = require('point-geometry');
@@ -37362,7 +37932,7 @@ module.exports = function bindHandlers(map, options) {
     for (var name in handlers) {
         map[name] = new handlers[name](map, options);
         if (options.interactive && options[name]) {
-            map[name].enable();
+            map[name].enable(options[name]);
         }
     }
     el.addEventListener('mouseout', onMouseOut, false);
@@ -37474,7 +38044,7 @@ module.exports = function bindHandlers(map, options) {
         });
     }
 };
-},{"../util/dom":186,"./handler/box_zoom":166,"./handler/dblclick_zoom":167,"./handler/drag_pan":168,"./handler/drag_rotate":169,"./handler/keyboard":170,"./handler/scroll_zoom":171,"./handler/touch_zoom_rotate":172,"point-geometry":205}],161:[function(require,module,exports){
+},{"../util/dom":191,"./handler/box_zoom":171,"./handler/dblclick_zoom":172,"./handler/drag_pan":173,"./handler/drag_rotate":174,"./handler/keyboard":175,"./handler/scroll_zoom":176,"./handler/touch_zoom_rotate":177,"point-geometry":210}],166:[function(require,module,exports){
 'use strict';
 var util = require('../util/util');
 var interpolate = require('../util/interpolate');
@@ -37486,6 +38056,7 @@ var Evented = require('../util/evented');
 var Camera = function (Evented) {
     function Camera(transform, options) {
         Evented.call(this);
+        this.moving = false;
         this.transform = transform;
         this._bearingSnap = options.bearingSnap;
     }
@@ -37632,6 +38203,7 @@ var Camera = function (Evented) {
             options.easing = this._smoothOutEasing(options.duration);
         }
         if (!options.noMoveStart) {
+            this.moving = true;
             this.fire('movestart', eventData);
         }
         if (this.zooming) {
@@ -37670,6 +38242,7 @@ var Camera = function (Evented) {
     };
     Camera.prototype._easeToEnd = function _easeToEnd(eventData) {
         var wasZooming = this.zooming;
+        this.moving = false;
         this.zooming = false;
         this.rotating = false;
         this.pitching = false;
@@ -37747,6 +38320,7 @@ var Camera = function (Evented) {
             var V = 'screenSpeed' in options ? +options.screenSpeed / rho : +options.speed;
             options.duration = 1000 * S / V;
         }
+        this.moving = true;
         this.zooming = true;
         if (startBearing !== bearing)
             this.rotating = true;
@@ -37774,6 +38348,7 @@ var Camera = function (Evented) {
                 this.fire('pitch', eventData);
             }
         }, function () {
+            this.moving = false;
             this.zooming = false;
             this.rotating = false;
             this.pitching = false;
@@ -37784,6 +38359,9 @@ var Camera = function (Evented) {
     };
     Camera.prototype.isEasing = function isEasing() {
         return !!this._abortFn;
+    };
+    Camera.prototype.isMoving = function isMoving() {
+        return this.moving;
     };
     Camera.prototype.stop = function stop() {
         if (this._abortFn) {
@@ -37832,7 +38410,7 @@ var Camera = function (Evented) {
     return Camera;
 }(Evented);
 module.exports = Camera;
-},{"../geo/lng_lat":90,"../geo/lng_lat_bounds":91,"../util/browser":179,"../util/evented":187,"../util/interpolate":190,"../util/util":198,"point-geometry":205}],162:[function(require,module,exports){
+},{"../geo/lng_lat":93,"../geo/lng_lat_bounds":94,"../util/browser":184,"../util/evented":192,"../util/interpolate":195,"../util/util":203,"point-geometry":210}],167:[function(require,module,exports){
 'use strict';
 var DOM = require('../../util/dom');
 var util = require('../../util/util');
@@ -37915,7 +38493,7 @@ AttributionControl.prototype._updateCompact = function _updateCompact() {
     this._container.classList[compact ? 'add' : 'remove']('compact');
 };
 module.exports = AttributionControl;
-},{"../../util/dom":186,"../../util/util":198}],163:[function(require,module,exports){
+},{"../../util/dom":191,"../../util/util":203}],168:[function(require,module,exports){
 'use strict';
 var Evented = require('../../util/evented');
 var DOM = require('../../util/dom');
@@ -38022,7 +38600,7 @@ var GeolocateControl = function (Evented) {
     return GeolocateControl;
 }(Evented);
 module.exports = GeolocateControl;
-},{"../../util/dom":186,"../../util/evented":187,"../../util/util":198,"../../util/window":181}],164:[function(require,module,exports){
+},{"../../util/dom":191,"../../util/evented":192,"../../util/util":203,"../../util/window":186}],169:[function(require,module,exports){
 'use strict';
 var DOM = require('../../util/dom');
 var window = require('../../util/window');
@@ -38112,7 +38690,7 @@ function copyMouseEvent(e) {
         metaKey: e.metaKey
     });
 }
-},{"../../util/dom":186,"../../util/util":198,"../../util/window":181}],165:[function(require,module,exports){
+},{"../../util/dom":191,"../../util/util":203,"../../util/window":186}],170:[function(require,module,exports){
 'use strict';
 var DOM = require('../../util/dom');
 var util = require('../../util/util');
@@ -38183,7 +38761,7 @@ function getRoundNum(num) {
     d = d >= 10 ? 10 : d >= 5 ? 5 : d >= 3 ? 3 : d >= 2 ? 2 : 1;
     return pow10 * d;
 }
-},{"../../util/dom":186,"../../util/util":198}],166:[function(require,module,exports){
+},{"../../util/dom":191,"../../util/util":203}],171:[function(require,module,exports){
 'use strict';
 var DOM = require('../../util/dom');
 var LngLatBounds = require('../../geo/lng_lat_bounds');
@@ -38276,7 +38854,7 @@ BoxZoomHandler.prototype._fireEvent = function _fireEvent(type, e) {
     return this._map.fire(type, { originalEvent: e });
 };
 module.exports = BoxZoomHandler;
-},{"../../geo/lng_lat_bounds":91,"../../util/dom":186,"../../util/util":198,"../../util/window":181}],167:[function(require,module,exports){
+},{"../../geo/lng_lat_bounds":94,"../../util/dom":191,"../../util/util":203,"../../util/window":186}],172:[function(require,module,exports){
 'use strict';
 var DoubleClickZoomHandler = function DoubleClickZoomHandler(map) {
     this._map = map;
@@ -38301,7 +38879,7 @@ DoubleClickZoomHandler.prototype._onDblClick = function _onDblClick(e) {
     this._map.zoomTo(this._map.getZoom() + (e.originalEvent.shiftKey ? -1 : 1), { around: e.lngLat }, e);
 };
 module.exports = DoubleClickZoomHandler;
-},{}],168:[function(require,module,exports){
+},{}],173:[function(require,module,exports){
 'use strict';
 var DOM = require('../../util/dom');
 var util = require('../../util/util');
@@ -38449,7 +39027,7 @@ DragPanHandler.prototype._drainInertiaBuffer = function _drainInertiaBuffer() {
         inertia.shift();
 };
 module.exports = DragPanHandler;
-},{"../../util/dom":186,"../../util/util":198,"../../util/window":181}],169:[function(require,module,exports){
+},{"../../util/dom":191,"../../util/util":203,"../../util/window":186}],174:[function(require,module,exports){
 'use strict';
 var DOM = require('../../util/dom');
 var util = require('../../util/util');
@@ -38594,7 +39172,7 @@ DragRotateHandler.prototype._drainInertiaBuffer = function _drainInertiaBuffer()
         inertia.shift();
 };
 module.exports = DragRotateHandler;
-},{"../../util/dom":186,"../../util/util":198,"../../util/window":181}],170:[function(require,module,exports){
+},{"../../util/dom":191,"../../util/util":203,"../../util/window":186}],175:[function(require,module,exports){
 'use strict';
 var panStep = 100, bearingStep = 15, pitchStep = 10;
 var KeyboardHandler = function KeyboardHandler(map) {
@@ -38691,7 +39269,7 @@ function easeOut(t) {
     return t * (2 - t);
 }
 module.exports = KeyboardHandler;
-},{}],171:[function(require,module,exports){
+},{}],176:[function(require,module,exports){
 'use strict';
 var DOM = require('../../util/dom');
 var util = require('../../util/util');
@@ -38709,12 +39287,13 @@ var ScrollZoomHandler = function ScrollZoomHandler(map) {
 ScrollZoomHandler.prototype.isEnabled = function isEnabled() {
     return !!this._enabled;
 };
-ScrollZoomHandler.prototype.enable = function enable() {
+ScrollZoomHandler.prototype.enable = function enable(options) {
     if (this.isEnabled())
         return;
     this._el.addEventListener('wheel', this._onWheel, false);
     this._el.addEventListener('mousewheel', this._onWheel, false);
     this._enabled = true;
+    this._aroundCenter = options && options.around === 'center';
 };
 ScrollZoomHandler.prototype.disable = function disable() {
     if (!this.isEnabled())
@@ -38775,13 +39354,13 @@ ScrollZoomHandler.prototype._zoom = function _zoom(delta, e) {
     var fromScale = map.ease ? map.ease.to : map.transform.scale, targetZoom = map.transform.scaleZoom(fromScale * scale);
     map.zoomTo(targetZoom, {
         duration: this._type === 'wheel' ? 200 : 0,
-        around: map.unproject(this._pos),
+        around: this._aroundCenter ? map.getCenter() : map.unproject(this._pos),
         delayEndEvents: 200,
         smoothEasing: true
     }, { originalEvent: e });
 };
 module.exports = ScrollZoomHandler;
-},{"../../util/browser":179,"../../util/dom":186,"../../util/util":198,"../../util/window":181}],172:[function(require,module,exports){
+},{"../../util/browser":184,"../../util/dom":191,"../../util/util":203,"../../util/window":186}],177:[function(require,module,exports){
 'use strict';
 var DOM = require('../../util/dom');
 var util = require('../../util/util');
@@ -38799,11 +39378,12 @@ var TouchZoomRotateHandler = function TouchZoomRotateHandler(map) {
 TouchZoomRotateHandler.prototype.isEnabled = function isEnabled() {
     return !!this._enabled;
 };
-TouchZoomRotateHandler.prototype.enable = function enable() {
+TouchZoomRotateHandler.prototype.enable = function enable(options) {
     if (this.isEnabled())
         return;
     this._el.addEventListener('touchstart', this._onStart, false);
     this._enabled = true;
+    this._aroundCenter = options && options.around === 'center';
 };
 TouchZoomRotateHandler.prototype.disable = function disable() {
     if (!this.isEnabled())
@@ -38898,7 +39478,7 @@ TouchZoomRotateHandler.prototype._onEnd = function _onEnd(e) {
         zoom: targetScale,
         duration: duration,
         easing: inertiaEasing,
-        around: map.unproject(p)
+        around: this._aroundCenter ? map.getCenter() : map.unproject(p)
     }, { originalEvent: e });
 };
 TouchZoomRotateHandler.prototype._drainInertiaBuffer = function _drainInertiaBuffer() {
@@ -38907,7 +39487,7 @@ TouchZoomRotateHandler.prototype._drainInertiaBuffer = function _drainInertiaBuf
         inertia.shift();
 };
 module.exports = TouchZoomRotateHandler;
-},{"../../util/dom":186,"../../util/util":198,"../../util/window":181}],173:[function(require,module,exports){
+},{"../../util/dom":191,"../../util/util":203,"../../util/window":186}],178:[function(require,module,exports){
 'use strict';
 var util = require('../util/util');
 var window = require('../util/window');
@@ -38955,7 +39535,7 @@ Hash.prototype._updateHash = function _updateHash() {
     window.history.replaceState('', '', hash);
 };
 module.exports = Hash;
-},{"../util/util":198,"../util/window":181}],174:[function(require,module,exports){
+},{"../util/util":203,"../util/window":186}],179:[function(require,module,exports){
 'use strict';
 var util = require('../util/util');
 var browser = require('../util/browser');
@@ -39104,6 +39684,7 @@ var Map = function (Camera) {
         return this;
     };
     Map.prototype.addClass = function addClass(klass, options) {
+        util.warnOnce('Style classes are deprecated and will be removed in an upcoming release of Mapbox GL JS.');
         if (this._classes.indexOf(klass) >= 0 || klass === '')
             return this;
         this._classes.push(klass);
@@ -39113,6 +39694,7 @@ var Map = function (Camera) {
         return this._update(true);
     };
     Map.prototype.removeClass = function removeClass(klass, options) {
+        util.warnOnce('Style classes are deprecated and will be removed in an upcoming release of Mapbox GL JS.');
         var i = this._classes.indexOf(klass);
         if (i < 0 || klass === '')
             return this;
@@ -39123,6 +39705,7 @@ var Map = function (Camera) {
         return this._update(true);
     };
     Map.prototype.setClasses = function setClasses(klasses, options) {
+        util.warnOnce('Style classes are deprecated and will be removed in an upcoming release of Mapbox GL JS.');
         var uniqueClasses = {};
         for (var i = 0; i < klasses.length; i++) {
             if (klasses[i] !== '')
@@ -39135,9 +39718,11 @@ var Map = function (Camera) {
         return this._update(true);
     };
     Map.prototype.hasClass = function hasClass(klass) {
+        util.warnOnce('Style classes are deprecated and will be removed in an upcoming release of Mapbox GL JS.');
         return this._classes.indexOf(klass) >= 0;
     };
     Map.prototype.getClasses = function getClasses() {
+        util.warnOnce('Style classes are deprecated and will be removed in an upcoming release of Mapbox GL JS.');
         return this._classes;
     };
     Map.prototype.resize = function resize() {
@@ -39147,6 +39732,11 @@ var Map = function (Camera) {
         this._resizeCanvas(width, height);
         this.transform.resize(width, height);
         this.painter.resize(width, height);
+        var gl = this.painter.gl;
+        var maxSize = gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) / 2;
+        if (this._canvas.width > maxSize || this._canvas.height > maxSize) {
+            util.warnOnce('Map is larger than maximum size supported by this system ' + '(' + maxSize + 'px by ' + maxSize + 'px).');
+        }
         return this.fire('movestart').fire('move').fire('resize').fire('moveend');
     };
     Map.prototype.getBounds = function getBounds() {
@@ -39308,6 +39898,14 @@ var Map = function (Camera) {
         this._update(true);
         return this;
     };
+    Map.prototype.isSourceLoaded = function isSourceLoaded(id) {
+        var source = this.style && this.style.sourceCaches[id];
+        if (source === undefined) {
+            this.fire('error', { error: new Error('There is no source with ID \'' + id + '\'') });
+            return;
+        }
+        return source.loaded();
+    };
     Map.prototype.addSourceType = function addSourceType(name, SourceType, callback) {
         return this.style.addSourceType(name, SourceType, callback);
     };
@@ -39437,10 +40035,6 @@ var Map = function (Camera) {
         if (!gl) {
             this.fire('error', { error: new Error('Failed to initialize WebGL') });
             return;
-        }
-        var MAX_RENDERBUFFER_SIZE = gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) / 2;
-        if (this._canvas.width > MAX_RENDERBUFFER_SIZE || this._canvas.height > MAX_RENDERBUFFER_SIZE) {
-            throw new Error('Map canvas (' + this._canvas.width + 'x' + this._canvas.height + ') ' + 'is larger than half of gl.MAX_RENDERBUFFER_SIZE (' + MAX_RENDERBUFFER_SIZE + ')');
         }
         this.painter = new Painter(gl, this.transform);
     };
@@ -39589,7 +40183,7 @@ function removeNode(node) {
         node.parentNode.removeChild(node);
     }
 }
-},{"../geo/lng_lat":90,"../geo/lng_lat_bounds":91,"../geo/transform":92,"../render/painter":107,"../style/animation_loop":128,"../style/style":132,"../util/browser":179,"../util/dom":186,"../util/util":198,"../util/window":181,"./bind_handlers":160,"./camera":161,"./control/attribution_control":162,"./hash":173,"mapbox-gl-supported":71,"point-geometry":205}],175:[function(require,module,exports){
+},{"../geo/lng_lat":93,"../geo/lng_lat_bounds":94,"../geo/transform":95,"../render/painter":110,"../style/animation_loop":133,"../style/style":137,"../util/browser":184,"../util/dom":191,"../util/util":203,"../util/window":186,"./bind_handlers":165,"./camera":166,"./control/attribution_control":167,"./hash":178,"mapbox-gl-supported":74,"point-geometry":210}],180:[function(require,module,exports){
 'use strict';
 var DOM = require('../util/dom');
 var LngLat = require('../geo/lng_lat');
@@ -39681,7 +40275,7 @@ Marker.prototype._update = function _update(e) {
     DOM.setTransform(this._element, 'translate(' + pos.x + 'px, ' + pos.y + 'px)');
 };
 module.exports = Marker;
-},{"../geo/lng_lat":90,"../util/dom":186,"point-geometry":205}],176:[function(require,module,exports){
+},{"../geo/lng_lat":93,"../util/dom":191,"point-geometry":210}],181:[function(require,module,exports){
 'use strict';
 var util = require('../util/util');
 var Evented = require('../util/evented');
@@ -39899,7 +40493,7 @@ function isPointLike(input) {
     return input instanceof Point || Array.isArray(input);
 }
 module.exports = Popup;
-},{"../geo/lng_lat":90,"../util/dom":186,"../util/evented":187,"../util/util":198,"../util/window":181,"point-geometry":205}],177:[function(require,module,exports){
+},{"../geo/lng_lat":93,"../util/dom":191,"../util/evented":192,"../util/util":203,"../util/window":186,"point-geometry":210}],182:[function(require,module,exports){
 'use strict';
 var Actor = function Actor(target, parent, mapId) {
     this.target = target;
@@ -39956,7 +40550,7 @@ Actor.prototype.remove = function remove() {
     this.target.removeEventListener('message', this.receive, false);
 };
 module.exports = Actor;
-},{}],178:[function(require,module,exports){
+},{}],183:[function(require,module,exports){
 'use strict';
 var window = require('./window');
 exports.getJSON = function (url, callback) {
@@ -39994,7 +40588,11 @@ exports.getArrayBuffer = function (url, callback) {
             return callback(new Error('http status 200 returned without content.'));
         }
         if (xhr.status >= 200 && xhr.status < 300 && xhr.response) {
-            callback(null, xhr.response);
+            callback(null, {
+                data: xhr.response,
+                cacheControl: xhr.getResponseHeader('Cache-Control'),
+                expires: xhr.getResponseHeader('Expires')
+            });
         } else {
             callback(new Error(xhr.statusText));
         }
@@ -40018,8 +40616,10 @@ exports.getImage = function (url, callback) {
             callback(null, img);
             URL.revokeObjectURL(img.src);
         };
-        var blob = new window.Blob([new Uint8Array(imgData)], { type: 'image/png' });
-        img.src = imgData.byteLength ? URL.createObjectURL(blob) : transparentPngUrl;
+        var blob = new window.Blob([new Uint8Array(imgData.data)], { type: 'image/png' });
+        img.cacheControl = imgData.cacheControl;
+        img.expires = imgData.expires;
+        img.src = imgData.data.byteLength ? URL.createObjectURL(blob) : transparentPngUrl;
     });
 };
 exports.getVideo = function (urls, callback) {
@@ -40037,7 +40637,7 @@ exports.getVideo = function (urls, callback) {
     }
     return video;
 };
-},{"./window":181}],179:[function(require,module,exports){
+},{"./window":186}],184:[function(require,module,exports){
 'use strict';
 var window = require('./window');
 module.exports.now = function () {
@@ -40099,7 +40699,7 @@ webpImgTest.onload = function () {
     exports.supportsWebp = true;
 };
 webpImgTest.src = 'data:image/webp;base64,UklGRh4AAABXRUJQVlA4TBEAAAAvAQAAAAfQ//73v/+BiOh/AAA=';
-},{"./window":181,"mapbox-gl-supported":71}],180:[function(require,module,exports){
+},{"./window":186,"mapbox-gl-supported":74}],185:[function(require,module,exports){
 'use strict';
 var WebWorkify = require('webworkify');
 var window = require('../window');
@@ -40107,10 +40707,10 @@ var workerURL = window.URL.createObjectURL(new WebWorkify(require('../../source/
 module.exports = function () {
     return new window.Worker(workerURL);
 };
-},{"../../source/worker":126,"../window":181,"webworkify":218}],181:[function(require,module,exports){
+},{"../../source/worker":131,"../window":186,"webworkify":223}],186:[function(require,module,exports){
 'use strict';
 module.exports = self;
-},{}],182:[function(require,module,exports){
+},{}],187:[function(require,module,exports){
 'use strict';
 var quickselect = require('quickselect');
 var calculateSignedArea = require('./util').calculateSignedArea;
@@ -40150,7 +40750,7 @@ module.exports = function classifyRings(rings, maxRings) {
 function compareAreas(a, b) {
     return b.area - a.area;
 }
-},{"./util":198,"quickselect":206}],183:[function(require,module,exports){
+},{"./util":203,"quickselect":211}],188:[function(require,module,exports){
 'use strict';
 var config = {
     API_URL: 'https://api.mapbox.com',
@@ -40158,7 +40758,7 @@ var config = {
     ACCESS_TOKEN: null
 };
 module.exports = config;
-},{}],184:[function(require,module,exports){
+},{}],189:[function(require,module,exports){
 'use strict';
 var DictionaryCoder = function DictionaryCoder(strings) {
     var this$1 = this;
@@ -40177,7 +40777,7 @@ DictionaryCoder.prototype.decode = function decode(n) {
     return this._numberToString[n];
 };
 module.exports = DictionaryCoder;
-},{}],185:[function(require,module,exports){
+},{}],190:[function(require,module,exports){
 'use strict';
 var util = require('./util');
 var Actor = require('./actor');
@@ -40217,7 +40817,7 @@ Dispatcher.prototype.remove = function remove() {
     this.workerPool.release(this.id);
 };
 module.exports = Dispatcher;
-},{"./actor":177,"./util":198}],186:[function(require,module,exports){
+},{"./actor":182,"./util":203}],191:[function(require,module,exports){
 'use strict';
 var Point = require('point-geometry');
 var window = require('./window');
@@ -40292,7 +40892,7 @@ exports.remove = function (node) {
         node.parentNode.removeChild(node);
     }
 };
-},{"./window":181,"point-geometry":205}],187:[function(require,module,exports){
+},{"./window":186,"point-geometry":210}],192:[function(require,module,exports){
 'use strict';
 var util = require('./util');
 var Evented = function Evented() {
@@ -40349,7 +40949,7 @@ Evented.prototype.setEventedParent = function setEventedParent(parent, data) {
     return this;
 };
 module.exports = Evented;
-},{"./util":198}],188:[function(require,module,exports){
+},{"./util":203}],193:[function(require,module,exports){
 'use strict';
 var Queue = require('tinyqueue');
 var Point = require('point-geometry');
@@ -40442,7 +41042,7 @@ function getCentroidCell(polygon) {
     }
     return new Cell(x / area, y / area, 0, polygon);
 }
-},{"./intersection_tests":191,"point-geometry":205,"tinyqueue":209}],189:[function(require,module,exports){
+},{"./intersection_tests":196,"point-geometry":210,"tinyqueue":215}],194:[function(require,module,exports){
 'use strict';
 module.exports = Glyphs;
 function Glyphs(pbf, end) {
@@ -40480,7 +41080,7 @@ function readGlyph(tag, glyph, pbf) {
     else if (tag === 7)
         glyph.advance = pbf.readVarint();
 }
-},{}],190:[function(require,module,exports){
+},{}],195:[function(require,module,exports){
 'use strict';
 module.exports = interpolate;
 function interpolate(a, b, t) {
@@ -40506,7 +41106,7 @@ interpolate.array = function (from, to, t) {
         return interpolate(d, to[i], t);
     });
 };
-},{}],191:[function(require,module,exports){
+},{}],196:[function(require,module,exports){
 'use strict';
 var isCounterClockwise = require('./util').isCounterClockwise;
 module.exports = {
@@ -40666,7 +41266,7 @@ function polygonContainsPoint(ring, p) {
     }
     return c;
 }
-},{"./util":198}],192:[function(require,module,exports){
+},{"./util":203}],197:[function(require,module,exports){
 'use strict';
 var unicodeBlockLookup = {
     'Latin-1 Supplement': function (char) {
@@ -40797,7 +41397,7 @@ var unicodeBlockLookup = {
     }
 };
 module.exports = unicodeBlockLookup;
-},{}],193:[function(require,module,exports){
+},{}],198:[function(require,module,exports){
 'use strict';
 var LRUCache = function LRUCache(max, onRemove) {
     this.max = max;
@@ -40844,6 +41444,16 @@ LRUCache.prototype.get = function get(key) {
     this.order.splice(this.order.indexOf(key), 1);
     return data;
 };
+LRUCache.prototype.remove = function remove(key) {
+    if (!this.has(key)) {
+        return this;
+    }
+    var data = this.data[key];
+    delete this.data[key];
+    this.onRemove(data);
+    this.order.splice(this.order.indexOf(key), 1);
+    return this;
+};
 LRUCache.prototype.setMaxSize = function setMaxSize(max) {
     var this$1 = this;
     this.max = max;
@@ -40855,7 +41465,7 @@ LRUCache.prototype.setMaxSize = function setMaxSize(max) {
     return this;
 };
 module.exports = LRUCache;
-},{}],194:[function(require,module,exports){
+},{}],199:[function(require,module,exports){
 'use strict';
 var config = require('./config');
 var browser = require('./browser');
@@ -40944,7 +41554,7 @@ function formatUrl(obj) {
     var params = obj.params.length ? '?' + obj.params.join('&') : '';
     return obj.protocol + '://' + obj.authority + obj.path + params;
 }
-},{"./browser":179,"./config":183}],195:[function(require,module,exports){
+},{"./browser":184,"./config":188}],200:[function(require,module,exports){
 'use strict';
 var isChar = require('./is_char_in_unicode_block');
 module.exports.allowsIdeographicBreaking = function (chars) {
@@ -41149,7 +41759,7 @@ exports.charHasNeutralVerticalOrientation = function (char) {
 exports.charHasRotatedVerticalOrientation = function (char) {
     return !(exports.charHasUprightVerticalOrientation(char) || exports.charHasNeutralVerticalOrientation(char));
 };
-},{"./is_char_in_unicode_block":192}],196:[function(require,module,exports){
+},{"./is_char_in_unicode_block":197}],201:[function(require,module,exports){
 'use strict';
 module.exports = createStructArrayType;
 var viewTypes = {
@@ -41347,7 +41957,7 @@ function createGetter(member, c) {
 function createSetter(member, c) {
     return new Function('x', createMemberComponentString(member, c) + ' = x;');
 }
-},{}],197:[function(require,module,exports){
+},{}],202:[function(require,module,exports){
 'use strict';
 module.exports = resolveTokens;
 function resolveTokens(properties, text) {
@@ -41355,9 +41965,9 @@ function resolveTokens(properties, text) {
         return key in properties ? properties[key] : '';
     });
 }
-},{}],198:[function(require,module,exports){
+},{}],203:[function(require,module,exports){
 'use strict';
-var UnitBezier = require('unitbezier');
+var UnitBezier = require('@mapbox/unitbezier');
 var Coordinate = require('../geo/coordinate');
 var Point = require('point-geometry');
 exports.easeCubicInOut = function (t) {
@@ -41567,7 +42177,24 @@ exports.sphericalToCartesian = function (spherical) {
         r * Math.cos(polar)
     ];
 };
-},{"../geo/coordinate":89,"point-geometry":205,"unitbezier":210}],199:[function(require,module,exports){
+exports.parseCacheControl = function (cacheControl) {
+    var re = /(?:^|(?:\s*\,\s*))([^\x00-\x20\(\)<>@\,;\:\\"\/\[\]\?\=\{\}\x7F]+)(?:\=(?:([^\x00-\x20\(\)<>@\,;\:\\"\/\[\]\?\=\{\}\x7F]+)|(?:\"((?:[^"\\]|\\.)*)\")))?/g;
+    var header = {};
+    cacheControl.replace(re, function ($0, $1, $2, $3) {
+        var value = $2 || $3;
+        header[$1] = value ? value.toLowerCase() : true;
+        return '';
+    });
+    if (header['max-age']) {
+        var maxAge = parseInt(header['max-age'], 10);
+        if (isNaN(maxAge))
+            delete header['max-age'];
+        else
+            header['max-age'] = maxAge;
+    }
+    return header;
+};
+},{"../geo/coordinate":92,"@mapbox/unitbezier":8,"point-geometry":210}],204:[function(require,module,exports){
 'use strict';
 var Feature = function Feature(vectorTileFeature, z, x, y) {
     this.type = 'Feature';
@@ -41602,7 +42229,7 @@ Feature.prototype.toJSON = function toJSON() {
 };
 Object.defineProperties(Feature.prototype, prototypeAccessors);
 module.exports = Feature;
-},{}],200:[function(require,module,exports){
+},{}],205:[function(require,module,exports){
 'use strict';
 var scriptDetection = require('./script_detection');
 module.exports = function verticalizePunctuation(input) {
@@ -41704,7 +42331,7 @@ module.exports.lookup = {
     '\uFF62': '\uFE41',
     '\uFF63': '\uFE42'
 };
-},{"./script_detection":195}],201:[function(require,module,exports){
+},{"./script_detection":200}],206:[function(require,module,exports){
 'use strict';
 var WebWorker = require('./web_worker');
 var WorkerPool = function WorkerPool() {
@@ -41732,11 +42359,11 @@ WorkerPool.prototype.release = function release(mapId) {
     }
 };
 module.exports = WorkerPool;
-},{"../mapbox-gl":95,"./web_worker":180}],202:[function(require,module,exports){
+},{"../mapbox-gl":98,"./web_worker":185}],207:[function(require,module,exports){
 module.exports={
-  "version": "0.31.0"
+  "version": "0.32.1"
 }
-},{}],203:[function(require,module,exports){
+},{}],208:[function(require,module,exports){
 'use strict';
 
 // lightweight Buffer shim for pbf browser build
@@ -41897,7 +42524,7 @@ function encodeString(str) {
     return bytes;
 }
 
-},{"ieee754":27}],204:[function(require,module,exports){
+},{"ieee754":30}],209:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -42323,7 +42950,7 @@ function writePackedFixed64(arr, pbf)  { for (var i = 0; i < arr.length; i++) pb
 function writePackedSFixed64(arr, pbf) { for (var i = 0; i < arr.length; i++) pbf.writeSFixed64(arr[i]); }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./buffer":203}],205:[function(require,module,exports){
+},{"./buffer":208}],210:[function(require,module,exports){
 'use strict';
 
 module.exports = Point;
@@ -42456,7 +43083,7 @@ Point.convert = function (a) {
     return a;
 };
 
-},{}],206:[function(require,module,exports){
+},{}],211:[function(require,module,exports){
 'use strict';
 
 module.exports = partialSort;
@@ -42518,7 +43145,7 @@ function defaultCompare(a, b) {
     return a < b ? -1 : a > b ? 1 : 0;
 }
 
-},{}],207:[function(require,module,exports){
+},{}],212:[function(require,module,exports){
 (function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
     typeof define === 'function' && define.amd ? define(factory) :
@@ -42773,7 +43400,355 @@ Shelf.prototype.resize = function(w) {
 return ShelfPack;
 
 }));
-},{}],208:[function(require,module,exports){
+},{}],213:[function(require,module,exports){
+'use strict';
+
+/**
+ * Module dependencies
+ */
+var decouple = require('decouple');
+var Emitter = require('emitter');
+
+/**
+ * Privates
+ */
+var scrollTimeout;
+var scrolling = false;
+var doc = window.document;
+var html = doc.documentElement;
+var msPointerSupported = window.navigator.msPointerEnabled;
+var touch = {
+  'start': msPointerSupported ? 'MSPointerDown' : 'touchstart',
+  'move': msPointerSupported ? 'MSPointerMove' : 'touchmove',
+  'end': msPointerSupported ? 'MSPointerUp' : 'touchend'
+};
+var prefix = (function prefix() {
+  var regex = /^(Webkit|Khtml|Moz|ms|O)(?=[A-Z])/;
+  var styleDeclaration = doc.getElementsByTagName('script')[0].style;
+  for (var prop in styleDeclaration) {
+    if (regex.test(prop)) {
+      return '-' + prop.match(regex)[0].toLowerCase() + '-';
+    }
+  }
+  // Nothing found so far? Webkit does not enumerate over the CSS properties of the style object.
+  // However (prop in style) returns the correct value, so we'll have to test for
+  // the precence of a specific property
+  if ('WebkitOpacity' in styleDeclaration) { return '-webkit-'; }
+  if ('KhtmlOpacity' in styleDeclaration) { return '-khtml-'; }
+  return '';
+}());
+function extend(destination, from) {
+  for (var prop in from) {
+    if (from[prop]) {
+      destination[prop] = from[prop];
+    }
+  }
+  return destination;
+}
+function inherits(child, uber) {
+  child.prototype = extend(child.prototype || {}, uber.prototype);
+}
+function hasIgnoredElements(el) {
+  while (el.parentNode) {
+    if (el.getAttribute('data-slideout-ignore') !== null) {
+      return el;
+    }
+    el = el.parentNode;
+  }
+  return null;
+}
+
+/**
+ * Slideout constructor
+ */
+function Slideout(options) {
+  options = options || {};
+
+  // Sets default values
+  this._startOffsetX = 0;
+  this._currentOffsetX = 0;
+  this._opening = false;
+  this._moved = false;
+  this._opened = false;
+  this._preventOpen = false;
+  this._touch = options.touch === undefined ? true : options.touch && true;
+  this._side = options.side || 'left';
+
+  // Sets panel
+  this.panel = options.panel;
+  this.menu = options.menu;
+
+  // Sets  classnames
+  if (!this.panel.classList.contains('slideout-panel')) {
+    this.panel.classList.add('slideout-panel');
+  }
+  if (!this.panel.classList.contains('slideout-panel-' + this._side)) {
+    this.panel.classList.add('slideout-panel-' + this._side);
+  }
+  if (!this.menu.classList.contains('slideout-menu')) {
+    this.menu.classList.add('slideout-menu');
+  }
+  if (!this.menu.classList.contains('slideout-menu-' + this._side)) {
+    this.menu.classList.add('slideout-menu-' + this._side);
+  }
+
+  // Sets options
+  this._fx = options.fx || 'ease';
+  this._duration = parseInt(options.duration, 10) || 300;
+  this._tolerance = parseInt(options.tolerance, 10) || 70;
+  this._padding = this._translateTo = parseInt(options.padding, 10) || 256;
+  this._orientation = this._side === 'right' ? -1 : 1;
+  this._translateTo *= this._orientation;
+
+  // Init touch events
+  if (this._touch) {
+    this._initTouchEvents();
+  }
+}
+
+/**
+ * Inherits from Emitter
+ */
+inherits(Slideout, Emitter);
+
+/**
+ * Opens the slideout menu.
+ */
+Slideout.prototype.open = function() {
+  var self = this;
+  this.emit('beforeopen');
+  if (!html.classList.contains('slideout-open')) {
+    html.classList.add('slideout-open');
+  }
+  this._setTransition();
+  this._translateXTo(this._translateTo);
+  this._opened = true;
+  setTimeout(function() {
+    self.panel.style.transition = self.panel.style['-webkit-transition'] = '';
+    self.emit('open');
+  }, this._duration + 50);
+  return this;
+};
+
+/**
+ * Closes slideout menu.
+ */
+Slideout.prototype.close = function() {
+  var self = this;
+  if (!this.isOpen() && !this._opening) {
+    return this;
+  }
+  this.emit('beforeclose');
+  this._setTransition();
+  this._translateXTo(0);
+  this._opened = false;
+  setTimeout(function() {
+    html.classList.remove('slideout-open');
+    self.panel.style.transition = self.panel.style['-webkit-transition'] = self.panel.style[prefix + 'transform'] = self.panel.style.transform = '';
+    self.emit('close');
+  }, this._duration + 50);
+  return this;
+};
+
+/**
+ * Toggles (open/close) slideout menu.
+ */
+Slideout.prototype.toggle = function() {
+  return this.isOpen() ? this.close() : this.open();
+};
+
+/**
+ * Returns true if the slideout is currently open, and false if it is closed.
+ */
+Slideout.prototype.isOpen = function() {
+  return this._opened;
+};
+
+/**
+ * Translates panel and updates currentOffset with a given X point
+ */
+Slideout.prototype._translateXTo = function(translateX) {
+  this._currentOffsetX = translateX;
+  this.panel.style[prefix + 'transform'] = this.panel.style.transform = 'translateX(' + translateX + 'px)';
+  return this;
+};
+
+/**
+ * Set transition properties
+ */
+Slideout.prototype._setTransition = function() {
+  this.panel.style[prefix + 'transition'] = this.panel.style.transition = prefix + 'transform ' + this._duration + 'ms ' + this._fx;
+  return this;
+};
+
+/**
+ * Initializes touch event
+ */
+Slideout.prototype._initTouchEvents = function() {
+  var self = this;
+
+  /**
+   * Decouple scroll event
+   */
+  this._onScrollFn = decouple(doc, 'scroll', function() {
+    if (!self._moved) {
+      clearTimeout(scrollTimeout);
+      scrolling = true;
+      scrollTimeout = setTimeout(function() {
+        scrolling = false;
+      }, 250);
+    }
+  });
+
+  /**
+   * Prevents touchmove event if slideout is moving
+   */
+  this._preventMove = function(eve) {
+    if (self._moved) {
+      eve.preventDefault();
+    }
+  };
+
+  doc.addEventListener(touch.move, this._preventMove);
+
+  /**
+   * Resets values on touchstart
+   */
+  this._resetTouchFn = function(eve) {
+    if (typeof eve.touches === 'undefined') {
+      return;
+    }
+
+    self._moved = false;
+    self._opening = false;
+    self._startOffsetX = eve.touches[0].pageX;
+    self._preventOpen = (!self._touch || (!self.isOpen() && self.menu.clientWidth !== 0));
+  };
+
+  this.panel.addEventListener(touch.start, this._resetTouchFn);
+
+  /**
+   * Resets values on touchcancel
+   */
+  this._onTouchCancelFn = function() {
+    self._moved = false;
+    self._opening = false;
+  };
+
+  this.panel.addEventListener('touchcancel', this._onTouchCancelFn);
+
+  /**
+   * Toggles slideout on touchend
+   */
+  this._onTouchEndFn = function() {
+    if (self._moved) {
+      self.emit('translateend');
+      (self._opening && Math.abs(self._currentOffsetX) > self._tolerance) ? self.open() : self.close();
+    }
+    self._moved = false;
+  };
+
+  this.panel.addEventListener(touch.end, this._onTouchEndFn);
+
+  /**
+   * Translates panel on touchmove
+   */
+  this._onTouchMoveFn = function(eve) {
+    if (
+      scrolling ||
+      self._preventOpen ||
+      typeof eve.touches === 'undefined' ||
+      hasIgnoredElements(eve.target)
+    ) {
+      return;
+    }
+
+    var dif_x = eve.touches[0].clientX - self._startOffsetX;
+    var translateX = self._currentOffsetX = dif_x;
+
+    if (Math.abs(translateX) > self._padding) {
+      return;
+    }
+
+    if (Math.abs(dif_x) > 20) {
+
+      self._opening = true;
+
+      var oriented_dif_x = dif_x * self._orientation;
+
+      if (self._opened && oriented_dif_x > 0 || !self._opened && oriented_dif_x < 0) {
+        return;
+      }
+
+      if (!self._moved) {
+        self.emit('translatestart');
+      }
+
+      if (oriented_dif_x <= 0) {
+        translateX = dif_x + self._padding * self._orientation;
+        self._opening = false;
+      }
+
+      if (!(self._moved && html.classList.contains('slideout-open'))) {
+        html.classList.add('slideout-open');
+      }
+
+      self.panel.style[prefix + 'transform'] = self.panel.style.transform = 'translateX(' + translateX + 'px)';
+      self.emit('translate', translateX);
+      self._moved = true;
+    }
+
+  };
+
+  this.panel.addEventListener(touch.move, this._onTouchMoveFn);
+
+  return this;
+};
+
+/**
+ * Enable opening the slideout via touch events.
+ */
+Slideout.prototype.enableTouch = function() {
+  this._touch = true;
+  return this;
+};
+
+/**
+ * Disable opening the slideout via touch events.
+ */
+Slideout.prototype.disableTouch = function() {
+  this._touch = false;
+  return this;
+};
+
+/**
+ * Destroy an instance of slideout.
+ */
+Slideout.prototype.destroy = function() {
+  // Close before clean
+  this.close();
+
+  // Remove event listeners
+  doc.removeEventListener(touch.move, this._preventMove);
+  this.panel.removeEventListener(touch.start, this._resetTouchFn);
+  this.panel.removeEventListener('touchcancel', this._onTouchCancelFn);
+  this.panel.removeEventListener(touch.end, this._onTouchEndFn);
+  this.panel.removeEventListener(touch.move, this._onTouchMoveFn);
+  doc.removeEventListener('scroll', this._onScrollFn);
+
+  // Remove methods
+  this.open = this.close = function() {};
+
+  // Return the instance so it can be easily dereferenced
+  return this;
+};
+
+/**
+ * Expose Slideout
+ */
+module.exports = Slideout;
+
+},{"decouple":14,"emitter":16}],214:[function(require,module,exports){
 'use strict';
 
 var kdbush = require('kdbush');
@@ -43002,7 +43977,7 @@ function getY(p) {
     return p.y;
 }
 
-},{"kdbush":28}],209:[function(require,module,exports){
+},{"kdbush":31}],215:[function(require,module,exports){
 'use strict';
 
 module.exports = TinyQueue;
@@ -43083,119 +44058,12 @@ function swap(data, i, j) {
     data[j] = tmp;
 }
 
-},{}],210:[function(require,module,exports){
-/*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
- * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
- * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * Ported from Webkit
- * http://svn.webkit.org/repository/webkit/trunk/Source/WebCore/platform/graphics/UnitBezier.h
- */
-
-module.exports = UnitBezier;
-
-function UnitBezier(p1x, p1y, p2x, p2y) {
-    // Calculate the polynomial coefficients, implicit first and last control points are (0,0) and (1,1).
-    this.cx = 3.0 * p1x;
-    this.bx = 3.0 * (p2x - p1x) - this.cx;
-    this.ax = 1.0 - this.cx - this.bx;
-
-    this.cy = 3.0 * p1y;
-    this.by = 3.0 * (p2y - p1y) - this.cy;
-    this.ay = 1.0 - this.cy - this.by;
-
-    this.p1x = p1x;
-    this.p1y = p2y;
-    this.p2x = p2x;
-    this.p2y = p2y;
-}
-
-UnitBezier.prototype.sampleCurveX = function(t) {
-    // `ax t^3 + bx t^2 + cx t' expanded using Horner's rule.
-    return ((this.ax * t + this.bx) * t + this.cx) * t;
-};
-
-UnitBezier.prototype.sampleCurveY = function(t) {
-    return ((this.ay * t + this.by) * t + this.cy) * t;
-};
-
-UnitBezier.prototype.sampleCurveDerivativeX = function(t) {
-    return (3.0 * this.ax * t + 2.0 * this.bx) * t + this.cx;
-};
-
-UnitBezier.prototype.solveCurveX = function(x, epsilon) {
-    if (typeof epsilon === 'undefined') epsilon = 1e-6;
-
-    var t0, t1, t2, x2, i;
-
-    // First try a few iterations of Newton's method -- normally very fast.
-    for (t2 = x, i = 0; i < 8; i++) {
-
-        x2 = this.sampleCurveX(t2) - x;
-        if (Math.abs(x2) < epsilon) return t2;
-
-        var d2 = this.sampleCurveDerivativeX(t2);
-        if (Math.abs(d2) < 1e-6) break;
-
-        t2 = t2 - x2 / d2;
-    }
-
-    // Fall back to the bisection method for reliability.
-    t0 = 0.0;
-    t1 = 1.0;
-    t2 = x;
-
-    if (t2 < t0) return t0;
-    if (t2 > t1) return t1;
-
-    while (t0 < t1) {
-
-        x2 = this.sampleCurveX(t2);
-        if (Math.abs(x2 - x) < epsilon) return t2;
-
-        if (x > x2) {
-            t0 = t2;
-        } else {
-            t1 = t2;
-        }
-
-        t2 = (t1 - t0) * 0.5 + t0;
-    }
-
-    // Failure.
-    return t2;
-};
-
-UnitBezier.prototype.solve = function(x, epsilon) {
-    return this.sampleCurveY(this.solveCurveX(x, epsilon));
-};
-
-},{}],211:[function(require,module,exports){
+},{}],216:[function(require,module,exports){
 module.exports.VectorTile = require('./lib/vectortile.js');
 module.exports.VectorTileFeature = require('./lib/vectortilefeature.js');
 module.exports.VectorTileLayer = require('./lib/vectortilelayer.js');
 
-},{"./lib/vectortile.js":212,"./lib/vectortilefeature.js":213,"./lib/vectortilelayer.js":214}],212:[function(require,module,exports){
+},{"./lib/vectortile.js":217,"./lib/vectortilefeature.js":218,"./lib/vectortilelayer.js":219}],217:[function(require,module,exports){
 'use strict';
 
 var VectorTileLayer = require('./vectortilelayer');
@@ -43214,7 +44082,7 @@ function readTile(tag, layers, pbf) {
 }
 
 
-},{"./vectortilelayer":214}],213:[function(require,module,exports){
+},{"./vectortilelayer":219}],218:[function(require,module,exports){
 'use strict';
 
 var Point = require('point-geometry');
@@ -43449,7 +44317,7 @@ function signedArea(ring) {
     return sum;
 }
 
-},{"point-geometry":205}],214:[function(require,module,exports){
+},{"point-geometry":210}],219:[function(require,module,exports){
 'use strict';
 
 var VectorTileFeature = require('./vectortilefeature.js');
@@ -43512,7 +44380,7 @@ VectorTileLayer.prototype.feature = function(i) {
     return new VectorTileFeature(this._pbf, end, this.extent, this._keys, this._values);
 };
 
-},{"./vectortilefeature.js":213}],215:[function(require,module,exports){
+},{"./vectortilefeature.js":218}],220:[function(require,module,exports){
 var Pbf = require('pbf')
 var vtpb = require('./vector-tile-pb')
 var GeoJSONWrapper = require('./lib/geojson_wrapper')
@@ -43668,7 +44536,7 @@ function wrapValue (value) {
   return result
 }
 
-},{"./lib/geojson_wrapper":216,"./vector-tile-pb":217,"pbf":204}],216:[function(require,module,exports){
+},{"./lib/geojson_wrapper":221,"./vector-tile-pb":222,"pbf":209}],221:[function(require,module,exports){
 'use strict'
 
 var Point = require('point-geometry')
@@ -43736,7 +44604,7 @@ FeatureWrapper.prototype.bbox = function () {
 
 FeatureWrapper.prototype.toGeoJSON = VectorTileFeature.prototype.toGeoJSON
 
-},{"point-geometry":205,"vector-tile":211}],217:[function(require,module,exports){
+},{"point-geometry":210,"vector-tile":216}],222:[function(require,module,exports){
 'use strict';
 
 // tile ========================================
@@ -43842,7 +44710,7 @@ function writeLayer(layer, pbf) {
     if (layer.extent !== undefined) pbf.writeVarintField(5, layer.extent);
 }
 
-},{}],218:[function(require,module,exports){
+},{}],223:[function(require,module,exports){
 var bundleFn = arguments[3];
 var sources = arguments[4];
 var cache = arguments[5];
@@ -43925,12 +44793,12 @@ module.exports = function (fn, options) {
     return worker;
 };
 
-},{}],219:[function(require,module,exports){
+},{}],224:[function(require,module,exports){
 module.exports.RADIUS = 6378137;
 module.exports.FLATTENING = 1/298.257223563;
 module.exports.POLAR_RADIUS = 6356752.3142;
 
-},{}],220:[function(require,module,exports){
+},{}],225:[function(require,module,exports){
 (function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
     typeof define === 'function' && define.amd ? define(['exports'], factory) :
