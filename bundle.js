@@ -1041,7 +1041,7 @@ var thisSlideout = new Slideout({
   'panel': document.getElementById('map-container'),
   'menu': document.getElementById('menu'),
   'touch': true,
-  'padding': 300,
+  'padding': 320,
   'tolerance': 70
 });
 
@@ -1066,6 +1066,36 @@ var map = new mapboxgl.Map({
         [-82.511, 42.600]
     ]
 });
+
+function getUniqueFeatures(array, comparatorProperty) {
+    var existingFeatureKeys = {};
+    // Because features come from tiled vector data, feature geometries may be split
+    // or duplicated across tile boundaries and, as a result, features may appear
+    // multiple times in query results.
+    var uniqueFeatures = array.filter(function(el) {
+        if (existingFeatureKeys[el.properties[comparatorProperty]]) {
+            return false;
+        } else {
+            existingFeatureKeys[el.properties[comparatorProperty]] = true;
+            return true;
+        }
+    });
+    // sort them alphabetically
+    return _.sortBy(uniqueFeatures, [function(f) { return f.properties.name; }]);
+}
+
+// i found this on stack overflow. extends the DOM to add a .remove() function for a NodeList
+// https://stackoverflow.com/questions/3387427/remove-element-by-id
+Element.prototype.remove = function() {
+  this.parentElement.removeChild(this);
+}
+NodeList.prototype.remove = HTMLCollection.prototype.remove = function() {
+    for(var i = this.length - 1; i >= 0; i--) {
+        if(this[i] && this[i].parentElement) {
+            this[i].parentElement.removeChild(this[i]);
+        }
+    }
+}
 
 // lookup object for the filters.
 var FILTERS = {
@@ -1107,13 +1137,17 @@ var geolocate = new mapboxgl.GeolocateControl({
 map.addControl(nav, 'bottom-right');
 map.addControl(geolocate, 'bottom-right');
 
-var popup = new mapboxgl.Popup({
-    closeButton: false
-});
-
 // do all the things when the map loads
 map.on('load', function() {
-  // add the GeoJSON from our ArcServer
+
+  function clickOnPark(p) {
+    // zoom to the park, but not too close
+    var fb = bbox(p.geometry);
+    var flybox = [[fb[0], fb[1]], [fb[2], fb[3]]]
+    map.fitBounds(flybox, { padding: 100, maxZoom: 16 })
+  };
+
+  // add park and rec center sources
   map.addSource('parks', {
     type: 'geojson',
     data: 'https://gis.detroitmi.gov/arcgis/rest/services/DoIT/ParksDEV/FeatureServer/1/query?where=1%3D1&text=&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&relationParam=&outFields=*&returnGeometry=true&returnTrueCurves=false&maxAllowableOffset=&geometryPrecision=5&outSR=4326&returnIdsOnly=false&returnCountOnly=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&gdbVersion=&returnDistinctValues=false&resultOffset=&resultRecordCount=&f=geojson'
@@ -1123,7 +1157,7 @@ map.on('load', function() {
     data: 'https://gis.detroitmi.gov/arcgis/rest/services/DoIT/ParksDEV/FeatureServer/0/query?where=1%3D1&text=&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&relationParam=&outFields=*&returnGeometry=true&returnTrueCurves=false&maxAllowableOffset=&geometryPrecision=5&outSR=4326&returnIdsOnly=false&returnCountOnly=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&gdbVersion=&returnDistinctValues=false&resultOffset=&resultRecordCount=&f=geojson'
   })
 
-  // add a fill layer
+  // add parks fill & line layer
   map.addLayer({
     "id": "parks-fill",
     "type": "fill",
@@ -1133,10 +1167,14 @@ map.on('load', function() {
     },
     "paint": {
         "fill-color": "green",
-        "fill-opacity": 0.25
+        "fill-opacity": {
+          stops: [
+            [8, 0.05],
+            [18, 0.3]
+          ]
+        }
     }
   })
-  // add an outline layer
   map.addLayer({
     "id": "parks-line",
     "type": "line",
@@ -1159,43 +1197,108 @@ map.on('load', function() {
         }
     }
   })
-  // add a fill layer
+
+  // add a rec center point layer
   map.addLayer({
-    "id": "rec-center-fill",
-    "type": "fill",
+    "id": "rec-center-symbol",
+    "type": "symbol",
     "source": "rec-centers",
     "layout": {
-      "visibility": "visible"
-    },
+        "icon-image": "star-15",
+        "text-field": "{name}",
+        "text-size": {
+          stops: [
+            [10, 12],
+            [20, 24]
+          ]
+        },
+        "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
+        "text-offset": [0, 1.5],
+        "text-anchor": "bottom"
+      },
     "paint": {
-        "fill-color": "blue",
-        "fill-opacity": 0.25
-    }
-  })
-  // add an outline layer
-  map.addLayer({
-    "id": "rec-centers-line",
-    "type": "line",
-    "source": "rec-centers",
-    "layout": {
-      "visibility": "visible",
-      "line-join": "round"
-    },
-    "paint": {
-        "line-color": "black",
-        "line-opacity": 0.8,
-        "line-width": {
-            stops: [
-                [8, 0.1],
-                [11, 0.5],
-                [13, 1.5],
-                [17, 2.5],
-                [22, 4]
-            ]
-        }
+        "text-color": "rgba(40,120,160,0.9)",
+        "text-halo-color": "rgba(240,240,240,0.1)",
+        "text-halo-width": 1.5,
+        "icon-color": "red"
     }
   })
 
+
+  function featClicked(feat){
+    console.log(feat)
+    var featCentroid = centroid(feat.geometry)
+    console.log(feat.layer.id)
+    switch (feat.layer.id){
+      case 'parks-fill':
+        var html = `
+          <span class=""><b>Park: ${feat.properties.name}</b></span><br/>
+          <span class="b">Address: ${feat.properties.address}</span><br/>
+          `;
+        break;
+      case 'rec-center-symbol':
+        var html = `
+          <span class=""><b>Rec Center: ${feat.properties.name}</b></span><br/>
+          <span class="b">Address: ${feat.properties.address}</span><br/>
+          `;
+        break;
+    }
+    console.log(html)
+    var popup = new mapboxgl.Popup();
+    popup.setLngLat(featCentroid.geometry.coordinates).setHTML(html).addTo(map);
+  }
+
+  function flyTo(p){
+    var fb = bbox(p.geometry);
+    var flybox = [[fb[0], fb[1]], [fb[2], fb[3]]]
+    map.fitBounds(flybox, { padding: 50, maxZoom: 17 })
+  }
+
+  map.on('click', function (e) {
+      var features = map.queryRenderedFeatures(e.point, { layers: ['parks-fill', 'rec-center-symbol'] });
+      if (!features.length) {
+          return;
+      }
+      featClicked(features[0])
+  });
+
+
+  map.on('moveend', function() {
+    var qu_parks = map.queryRenderedFeatures({
+      layers: ['parks-fill'],
+    });
+    var qu_centers = map.queryRenderedFeatures({
+      layers: ['rec-center-symbol'],
+    });
+    var parks_to_show = getUniqueFeatures(qu_parks, 'ogc_fid');
+    var centers_to_show = getUniqueFeatures(qu_centers, 'ogc_fid');
+
+    var parkList = document.getElementById('parks')
+    while (parkList.firstChild) {
+      parkList.removeChild(parkList.firstChild);
+    }
+    parks_to_show.forEach(function(p){
+      var park = document.createElement('span');
+      park.innerHTML = `<b>${p.properties.name}</b><br /><i>(${p.properties.address})</i>`;
+      park.addEventListener('mousedown', function() {
+        flyTo(p);
+      });
+      parkList.appendChild(park)
+    })
+
+    var recList = document.getElementById('rec_centers')
+    while (recList.firstChild) {
+      recList.removeChild(recList.firstChild);
+    }
+    centers_to_show.forEach(function(c){
+      var rec = document.createElement('span');
+      rec.innerHTML = `<b>${c.properties.name}</b><br /><i>(${c.properties.address})</i><br /><i>(${c.properties.opening_hours})</i>`;
+      rec.addEventListener('mousedown', function() {
+        flyTo(c);
+      });
+      recList.appendChild(rec)
+    })
+  });
 })
 
 },{"@turf/bbox":9,"@turf/centroid":10,"lodash":43,"mapbox-gl":98,"slideout":213}],7:[function(require,module,exports){
@@ -1925,13 +2028,14 @@ module.exports = function (features) {
  * //=feature
  */
 function feature(geometry, properties) {
+    if (!geometry) throw new Error('No geometry passed');
+
     return {
         type: 'Feature',
         properties: properties || {},
         geometry: geometry
     };
 }
-
 module.exports.feature = feature;
 
 /**
@@ -1948,11 +2052,14 @@ module.exports.feature = feature;
  * //=pt1
  */
 module.exports.point = function (coordinates, properties) {
-    if (!Array.isArray(coordinates)) throw new Error('Coordinates must be an array');
+    if (!coordinates) throw new Error('No coordinates passed');
+    if (coordinates.length === undefined) throw new Error('Coordinates must be an array');
     if (coordinates.length < 2) throw new Error('Coordinates must be at least 2 numbers long');
+    if (typeof coordinates[0] !== 'number' || typeof coordinates[1] !== 'number') throw new Error('Coordinates must numbers');
+
     return feature({
         type: 'Point',
-        coordinates: coordinates.slice()
+        coordinates: coordinates
     }, properties);
 };
 
@@ -1978,7 +2085,6 @@ module.exports.point = function (coordinates, properties) {
  * //=polygon
  */
 module.exports.polygon = function (coordinates, properties) {
-
     if (!coordinates) throw new Error('No coordinates passed');
 
     for (var i = 0; i < coordinates.length; i++) {
@@ -2010,16 +2116,16 @@ module.exports.polygon = function (coordinates, properties) {
  * @throws {Error} if no coordinates are passed
  * @example
  * var linestring1 = turf.lineString([
- *	[-21.964416, 64.148203],
- *	[-21.956176, 64.141316],
- *	[-21.93901, 64.135924],
- *	[-21.927337, 64.136673]
+ *   [-21.964416, 64.148203],
+ *   [-21.956176, 64.141316],
+ *   [-21.93901, 64.135924],
+ *   [-21.927337, 64.136673]
  * ]);
  * var linestring2 = turf.lineString([
- *	[-21.929054, 64.127985],
- *	[-21.912918, 64.134726],
- *	[-21.916007, 64.141016],
- * 	[-21.930084, 64.14446]
+ *   [-21.929054, 64.127985],
+ *   [-21.912918, 64.134726],
+ *   [-21.916007, 64.141016],
+ *   [-21.930084, 64.14446]
  * ], {name: 'line 1', distance: 145});
  *
  * //=linestring1
@@ -2027,9 +2133,8 @@ module.exports.polygon = function (coordinates, properties) {
  * //=linestring2
  */
 module.exports.lineString = function (coordinates, properties) {
-    if (!coordinates) {
-        throw new Error('No coordinates passed');
-    }
+    if (!coordinates) throw new Error('No coordinates passed');
+
     return feature({
         type: 'LineString',
         coordinates: coordinates
@@ -2054,6 +2159,8 @@ module.exports.lineString = function (coordinates, properties) {
  * //=fc
  */
 module.exports.featureCollection = function (features) {
+    if (!features) throw new Error('No features passed');
+
     return {
         type: 'FeatureCollection',
         features: features
@@ -2076,9 +2183,8 @@ module.exports.featureCollection = function (features) {
  *
  */
 module.exports.multiLineString = function (coordinates, properties) {
-    if (!coordinates) {
-        throw new Error('No coordinates passed');
-    }
+    if (!coordinates) throw new Error('No coordinates passed');
+
     return feature({
         type: 'MultiLineString',
         coordinates: coordinates
@@ -2101,9 +2207,8 @@ module.exports.multiLineString = function (coordinates, properties) {
  *
  */
 module.exports.multiPoint = function (coordinates, properties) {
-    if (!coordinates) {
-        throw new Error('No coordinates passed');
-    }
+    if (!coordinates) throw new Error('No coordinates passed');
+
     return feature({
         type: 'MultiPoint',
         coordinates: coordinates
@@ -2127,9 +2232,8 @@ module.exports.multiPoint = function (coordinates, properties) {
  *
  */
 module.exports.multiPolygon = function (coordinates, properties) {
-    if (!coordinates) {
-        throw new Error('No coordinates passed');
-    }
+    if (!coordinates) throw new Error('No coordinates passed');
+
     return feature({
         type: 'MultiPolygon',
         coordinates: coordinates
@@ -2158,6 +2262,8 @@ module.exports.multiPolygon = function (coordinates, properties) {
  * //=collection
  */
 module.exports.geometryCollection = function (geometries, properties) {
+    if (!geometries) throw new Error('No geometries passed');
+
     return feature({
         type: 'GeometryCollection',
         geometries: geometries
@@ -2189,9 +2295,8 @@ var factors = {
  */
 module.exports.radiansToDistance = function (radians, units) {
     var factor = factors[units || 'kilometers'];
-    if (factor === undefined) {
-        throw new Error('Invalid unit');
-    }
+    if (factor === undefined) throw new Error('Invalid unit');
+
     return radians * factor;
 };
 
@@ -2206,9 +2311,8 @@ module.exports.radiansToDistance = function (radians, units) {
  */
 module.exports.distanceToRadians = function (distance, units) {
     var factor = factors[units || 'kilometers'];
-    if (factor === undefined) {
-        throw new Error('Invalid unit');
-    }
+    if (factor === undefined) throw new Error('Invalid unit');
+
     return distance / factor;
 };
 
@@ -2223,32 +2327,62 @@ module.exports.distanceToRadians = function (distance, units) {
  */
 module.exports.distanceToDegrees = function (distance, units) {
     var factor = factors[units || 'kilometers'];
-    if (factor === undefined) {
-        throw new Error('Invalid unit');
-    }
+    if (factor === undefined) throw new Error('Invalid unit');
+
     return (distance / factor) * 57.2958;
 };
 
 },{}],12:[function(require,module,exports){
 /**
- * Iterate over coordinates in any GeoJSON object, similar to
- * Array.forEach.
+ * Callback for coordEach
+ *
+ * @private
+ * @callback coordEachCallback
+ * @param {[number, number]} currentCoords The current coordinates being processed.
+ * @param {number} currentIndex The index of the current element being processed in the
+ * array.Starts at index 0, if an initialValue is provided, and at index 1 otherwise.
+ */
+
+/**
+ * Iterate over coordinates in any GeoJSON object, similar to Array.forEach()
  *
  * @name coordEach
  * @param {Object} layer any GeoJSON object
- * @param {Function} callback a method that takes (value)
- * @param {boolean=} excludeWrapCoord whether or not to include
+ * @param {Function} callback a method that takes (currentCoords, currentIndex)
+ * @param {boolean} [excludeWrapCoord=false] whether or not to include
  * the final coordinate of LinearRings that wraps the ring in its iteration.
  * @example
- * var point = { type: 'Point', coordinates: [0, 0] };
- * turfMeta.coordEach(point, function(coords) {
- *   // coords is equal to [0, 0]
+ * var features = {
+ *   "type": "FeatureCollection",
+ *   "features": [
+ *     {
+ *       "type": "Feature",
+ *       "properties": {},
+ *       "geometry": {
+ *         "type": "Point",
+ *         "coordinates": [26, 37]
+ *       }
+ *     },
+ *     {
+ *       "type": "Feature",
+ *       "properties": {},
+ *       "geometry": {
+ *         "type": "Point",
+ *         "coordinates": [36, 53]
+ *       }
+ *     }
+ *   ]
+ * };
+ * turf.coordEach(features, function (currentCoords, currentIndex) {
+ *   //=currentCoords
+ *   //=currentIndex
  * });
  */
 function coordEach(layer, callback, excludeWrapCoord) {
     var i, j, k, g, l, geometry, stopG, coords,
         geometryMaybeCollection,
         wrapShrink = 0,
+        currentIndex = 0,
         isGeometryCollection,
         isFeatureCollection = layer.type === 'FeatureCollection',
         isFeature = layer.type === 'Feature',
@@ -2283,18 +2417,26 @@ function coordEach(layer, callback, excludeWrapCoord) {
                 1 : 0;
 
             if (geometry.type === 'Point') {
-                callback(coords);
+                callback(coords, currentIndex);
+                currentIndex++;
             } else if (geometry.type === 'LineString' || geometry.type === 'MultiPoint') {
-                for (j = 0; j < coords.length; j++) callback(coords[j]);
+                for (j = 0; j < coords.length; j++) {
+                    callback(coords[j], currentIndex);
+                    currentIndex++;
+                }
             } else if (geometry.type === 'Polygon' || geometry.type === 'MultiLineString') {
                 for (j = 0; j < coords.length; j++)
-                    for (k = 0; k < coords[j].length - wrapShrink; k++)
-                        callback(coords[j][k]);
+                    for (k = 0; k < coords[j].length - wrapShrink; k++) {
+                        callback(coords[j][k], currentIndex);
+                        currentIndex++;
+                    }
             } else if (geometry.type === 'MultiPolygon') {
                 for (j = 0; j < coords.length; j++)
                     for (k = 0; k < coords[j].length; k++)
-                        for (l = 0; l < coords[j][k].length - wrapShrink; l++)
-                            callback(coords[j][k][l]);
+                        for (l = 0; l < coords[j][k].length - wrapShrink; l++) {
+                            callback(coords[j][k][l], currentIndex);
+                            currentIndex++;
+                        }
             } else if (geometry.type === 'GeometryCollection') {
                 for (j = 0; j < geometry.geometries.length; j++)
                     coordEach(geometry.geometries[j], callback, excludeWrapCoord);
@@ -2307,38 +2449,121 @@ function coordEach(layer, callback, excludeWrapCoord) {
 module.exports.coordEach = coordEach;
 
 /**
- * Reduce coordinates in any GeoJSON object into a single value,
- * similar to how Array.reduce works. However, in this case we lazily run
- * the reduction, so an array of all coordinates is unnecessary.
+ * Callback for coordReduce
+ *
+ * The first time the callback function is called, the values provided as arguments depend
+ * on whether the reduce method has an initialValue argument.
+ *
+ * If an initialValue is provided to the reduce method:
+ *  - The previousValue argument is initialValue.
+ *  - The currentValue argument is the value of the first element present in the array.
+ *
+ * If an initialValue is not provided:
+ *  - The previousValue argument is the value of the first element present in the array.
+ *  - The currentValue argument is the value of the second element present in the array.
+ *
+ * @private
+ * @callback coordReduceCallback
+ * @param {*} previousValue The accumulated value previously returned in the last invocation
+ * of the callback, or initialValue, if supplied.
+ * @param {[number, number]} currentCoords The current coordinate being processed.
+ * @param {number} currentIndex The index of the current element being processed in the
+ * array.Starts at index 0, if an initialValue is provided, and at index 1 otherwise.
+ */
+
+/**
+ * Reduce coordinates in any GeoJSON object, similar to Array.reduce()
  *
  * @name coordReduce
  * @param {Object} layer any GeoJSON object
- * @param {Function} callback a method that takes (memo, value) and returns
- * a new memo
- * @param {*} memo the starting value of memo: can be any type.
- * @param {boolean=} excludeWrapCoord whether or not to include
+ * @param {Function} callback a method that takes (previousValue, currentCoords, currentIndex)
+ * @param {*} [initialValue] Value to use as the first argument to the first call of the callback.
+ * @param {boolean} [excludeWrapCoord=false] whether or not to include
  * the final coordinate of LinearRings that wraps the ring in its iteration.
- * @returns {*} combined value
+ * @returns {*} The value that results from the reduction.
+ * @example
+ * var features = {
+ *   "type": "FeatureCollection",
+ *   "features": [
+ *     {
+ *       "type": "Feature",
+ *       "properties": {},
+ *       "geometry": {
+ *         "type": "Point",
+ *         "coordinates": [26, 37]
+ *       }
+ *     },
+ *     {
+ *       "type": "Feature",
+ *       "properties": {},
+ *       "geometry": {
+ *         "type": "Point",
+ *         "coordinates": [36, 53]
+ *       }
+ *     }
+ *   ]
+ * };
+ * turf.coordReduce(features, function (previousValue, currentCoords, currentIndex) {
+ *   //=previousValue
+ *   //=currentCoords
+ *   //=currentIndex
+ *   return currentCoords;
+ * });
  */
-function coordReduce(layer, callback, memo, excludeWrapCoord) {
-    coordEach(layer, function (coord) {
-        memo = callback(memo, coord);
+function coordReduce(layer, callback, initialValue, excludeWrapCoord) {
+    var previousValue = initialValue;
+    coordEach(layer, function (currentCoords, currentIndex) {
+        if (currentIndex === 0 && initialValue === undefined) {
+            previousValue = currentCoords;
+        } else {
+            previousValue = callback(previousValue, currentCoords, currentIndex);
+        }
     }, excludeWrapCoord);
-    return memo;
+    return previousValue;
 }
 module.exports.coordReduce = coordReduce;
 
 /**
- * Iterate over property objects in any GeoJSON object, similar to
- * Array.forEach.
+ * Callback for propEach
+ *
+ * @private
+ * @callback propEachCallback
+ * @param {*} currentProperties The current properties being processed.
+ * @param {number} currentIndex The index of the current element being processed in the
+ * array.Starts at index 0, if an initialValue is provided, and at index 1 otherwise.
+ */
+
+/**
+ * Iterate over properties in any GeoJSON object, similar to Array.forEach()
  *
  * @name propEach
  * @param {Object} layer any GeoJSON object
- * @param {Function} callback a method that takes (value)
+ * @param {Function} callback a method that takes (currentProperties, currentIndex)
  * @example
- * var point = { type: 'Feature', geometry: null, properties: { foo: 1 } };
- * turfMeta.propEach(point, function(props) {
- *   // props is equal to { foo: 1}
+ * var features = {
+ *   "type": "FeatureCollection",
+ *   "features": [
+ *     {
+ *       "type": "Feature",
+ *       "properties": {"foo": "bar"},
+ *       "geometry": {
+ *         "type": "Point",
+ *         "coordinates": [26, 37]
+ *       }
+ *     },
+ *     {
+ *       "type": "Feature",
+ *       "properties": {"hello": "world"},
+ *       "geometry": {
+ *         "type": "Point",
+ *         "coordinates": [36, 53]
+ *       }
+ *     }
+ *   ]
+ * };
+ * turf.propEach(features, function (currentProperties, currentIndex) {
+ *   //=currentProperties
+ *   //=currentIndex
  * });
  */
 function propEach(layer, callback) {
@@ -2356,6 +2581,30 @@ function propEach(layer, callback) {
 }
 module.exports.propEach = propEach;
 
+
+/**
+ * Callback for propReduce
+ *
+ * The first time the callback function is called, the values provided as arguments depend
+ * on whether the reduce method has an initialValue argument.
+ *
+ * If an initialValue is provided to the reduce method:
+ *  - The previousValue argument is initialValue.
+ *  - The currentValue argument is the value of the first element present in the array.
+ *
+ * If an initialValue is not provided:
+ *  - The previousValue argument is the value of the first element present in the array.
+ *  - The currentValue argument is the value of the second element present in the array.
+ *
+ * @private
+ * @callback propReduceCallback
+ * @param {*} previousValue The accumulated value previously returned in the last invocation
+ * of the callback, or initialValue, if supplied.
+ * @param {*} currentProperties The current properties being processed.
+ * @param {number} currentIndex The index of the current element being processed in the
+ * array.Starts at index 0, if an initialValue is provided, and at index 1 otherwise.
+ */
+
 /**
  * Reduce properties in any GeoJSON object into a single value,
  * similar to how Array.reduce works. However, in this case we lazily run
@@ -2363,30 +2612,60 @@ module.exports.propEach = propEach;
  *
  * @name propReduce
  * @param {Object} layer any GeoJSON object
- * @param {Function} callback a method that takes (memo, coord) and returns
- * a new memo
- * @param {*} memo the starting value of memo: can be any type.
- * @returns {*} combined value
+ * @param {Function} callback a method that takes (previousValue, currentProperties, currentIndex)
+ * @param {*} [initialValue] Value to use as the first argument to the first call of the callback.
+ * @returns {*} The value that results from the reduction.
  * @example
- * // an example of an even more advanced function that gives you the
- * // javascript type of each property of every feature
- * function propTypes (layer) {
- *   opts = opts || {}
- *   return turfMeta.propReduce(layer, function (prev, props) {
- *     for (var prop in props) {
- *       if (prev[prop]) continue
- *       prev[prop] = typeof props[prop]
+ * var features = {
+ *   "type": "FeatureCollection",
+ *   "features": [
+ *     {
+ *       "type": "Feature",
+ *       "properties": {"foo": "bar"},
+ *       "geometry": {
+ *         "type": "Point",
+ *         "coordinates": [26, 37]
+ *       }
+ *     },
+ *     {
+ *       "type": "Feature",
+ *       "properties": {"hello": "world"},
+ *       "geometry": {
+ *         "type": "Point",
+ *         "coordinates": [36, 53]
+ *       }
  *     }
- *   }, {})
- * }
+ *   ]
+ * };
+ * turf.propReduce(features, function (previousValue, currentProperties, currentIndex) {
+ *   //=previousValue
+ *   //=currentProperties
+ *   //=currentIndex
+ *   return currentProperties
+ * });
  */
-function propReduce(layer, callback, memo) {
-    propEach(layer, function (prop, i) {
-        memo = callback(memo, prop, i);
+function propReduce(layer, callback, initialValue) {
+    var previousValue = initialValue;
+    propEach(layer, function (currentProperties, currentIndex) {
+        if (currentIndex === 0 && initialValue === undefined) {
+            previousValue = currentProperties;
+        } else {
+            previousValue = callback(previousValue, currentProperties, currentIndex);
+        }
     });
-    return memo;
+    return previousValue;
 }
 module.exports.propReduce = propReduce;
+
+/**
+ * Callback for featureEach
+ *
+ * @private
+ * @callback featureEachCallback
+ * @param {Feature<any>} currentFeature The current feature being processed.
+ * @param {number} currentIndex The index of the current element being processed in the
+ * array.Starts at index 0, if an initialValue is provided, and at index 1 otherwise.
+ */
 
 /**
  * Iterate over features in any GeoJSON object, similar to
@@ -2394,11 +2673,32 @@ module.exports.propReduce = propReduce;
  *
  * @name featureEach
  * @param {Object} layer any GeoJSON object
- * @param {Function} callback a method that takes (value)
+ * @param {Function} callback a method that takes (currentFeature, currentIndex)
  * @example
- * var feature = { type: 'Feature', geometry: null, properties: {} };
- * turfMeta.featureEach(feature, function(feature) {
- *   // feature == feature
+ * var features = {
+ *   "type": "FeatureCollection",
+ *   "features": [
+ *     {
+ *       "type": "Feature",
+ *       "properties": {},
+ *       "geometry": {
+ *         "type": "Point",
+ *         "coordinates": [26, 37]
+ *       }
+ *     },
+ *     {
+ *       "type": "Feature",
+ *       "properties": {},
+ *       "geometry": {
+ *         "type": "Point",
+ *         "coordinates": [36, 53]
+ *       }
+ *     }
+ *   ]
+ * };
+ * turf.featureEach(features, function (currentFeature, currentIndex) {
+ *   //=currentFeature
+ *   //=currentIndex
  * });
  */
 function featureEach(layer, callback) {
@@ -2413,12 +2713,108 @@ function featureEach(layer, callback) {
 module.exports.featureEach = featureEach;
 
 /**
- * Get all coordinates from any GeoJSON object, returning an array of coordinate
- * arrays.
+ * Callback for featureReduce
+ *
+ * The first time the callback function is called, the values provided as arguments depend
+ * on whether the reduce method has an initialValue argument.
+ *
+ * If an initialValue is provided to the reduce method:
+ *  - The previousValue argument is initialValue.
+ *  - The currentValue argument is the value of the first element present in the array.
+ *
+ * If an initialValue is not provided:
+ *  - The previousValue argument is the value of the first element present in the array.
+ *  - The currentValue argument is the value of the second element present in the array.
+ *
+ * @private
+ * @callback featureReduceCallback
+ * @param {*} previousValue The accumulated value previously returned in the last invocation
+ * of the callback, or initialValue, if supplied.
+ * @param {Feature<any>} currentFeature The current Feature being processed.
+ * @param {number} currentIndex The index of the current element being processed in the
+ * array.Starts at index 0, if an initialValue is provided, and at index 1 otherwise.
+ */
+
+/**
+ * Reduce features in any GeoJSON object, similar to Array.reduce().
+ *
+ * @name featureReduce
+ * @param {Object} layer any GeoJSON object
+ * @param {Function} callback a method that takes (previousValue, currentFeature, currentIndex)
+ * @param {*} [initialValue] Value to use as the first argument to the first call of the callback.
+ * @returns {*} The value that results from the reduction.
+ * @example
+ * var features = {
+ *   "type": "FeatureCollection",
+ *   "features": [
+ *     {
+ *       "type": "Feature",
+ *       "properties": {"foo": "bar"},
+ *       "geometry": {
+ *         "type": "Point",
+ *         "coordinates": [26, 37]
+ *       }
+ *     },
+ *     {
+ *       "type": "Feature",
+ *       "properties": {"hello": "world"},
+ *       "geometry": {
+ *         "type": "Point",
+ *         "coordinates": [36, 53]
+ *       }
+ *     }
+ *   ]
+ * };
+ * turf.featureReduce(features, function (previousValue, currentFeature, currentIndex) {
+ *   //=previousValue
+ *   //=currentFeature
+ *   //=currentIndex
+ *   return currentFeature
+ * });
+ */
+function featureReduce(layer, callback, initialValue) {
+    var previousValue = initialValue;
+    featureEach(layer, function (currentFeature, currentIndex) {
+        if (currentIndex === 0 && initialValue === undefined) {
+            previousValue = currentFeature;
+        } else {
+            previousValue = callback(previousValue, currentFeature, currentIndex);
+        }
+    });
+    return previousValue;
+}
+module.exports.featureReduce = featureReduce;
+
+/**
+ * Get all coordinates from any GeoJSON object.
  *
  * @name coordAll
  * @param {Object} layer any GeoJSON object
  * @returns {Array<Array<number>>} coordinate position array
+ * @example
+ * var features = {
+ *   "type": "FeatureCollection",
+ *   "features": [
+ *     {
+ *       "type": "Feature",
+ *       "properties": {},
+ *       "geometry": {
+ *         "type": "Point",
+ *         "coordinates": [26, 37]
+ *       }
+ *     },
+ *     {
+ *       "type": "Feature",
+ *       "properties": {},
+ *       "geometry": {
+ *         "type": "Point",
+ *         "coordinates": [36, 53]
+ *       }
+ *     }
+ *   ]
+ * };
+ * var coords = turf.coordAll(features);
+ * //=coords
  */
 function coordAll(layer) {
     var coords = [];
@@ -2430,26 +2826,43 @@ function coordAll(layer) {
 module.exports.coordAll = coordAll;
 
 /**
- * Iterate over each geometry in any GeoJSON object, similar to
- * Array.forEach.
+ * Iterate over each geometry in any GeoJSON object, similar to Array.forEach()
  *
  * @name geomEach
  * @param {Object} layer any GeoJSON object
- * @param {Function} callback a method that takes (value)
+ * @param {Function} callback a method that takes (currentGeometry, currentIndex)
  * @example
- * var point = {
- *   type: 'Feature',
- *   geometry: { type: 'Point', coordinates: [0, 0] },
- *   properties: {}
+ * var features = {
+ *   "type": "FeatureCollection",
+ *   "features": [
+ *     {
+ *       "type": "Feature",
+ *       "properties": {},
+ *       "geometry": {
+ *         "type": "Point",
+ *         "coordinates": [26, 37]
+ *       }
+ *     },
+ *     {
+ *       "type": "Feature",
+ *       "properties": {},
+ *       "geometry": {
+ *         "type": "Point",
+ *         "coordinates": [36, 53]
+ *       }
+ *     }
+ *   ]
  * };
- * turfMeta.geomEach(point, function(geom) {
- *   // geom is the point geometry
+ * turf.geomEach(features, function (currentGeometry, currentIndex) {
+ *   //=currentGeometry
+ *   //=currentIndex
  * });
  */
 function geomEach(layer, callback) {
     var i, j, g, geometry, stopG,
         geometryMaybeCollection,
         isGeometryCollection,
+        currentIndex = 0,
         isFeatureCollection = layer.type === 'FeatureCollection',
         isFeature = layer.type === 'Feature',
         stop = isFeatureCollection ? layer.features.length : 1;
@@ -2483,10 +2896,13 @@ function geomEach(layer, callback) {
                 geometry.type === 'Polygon' ||
                 geometry.type === 'MultiLineString' ||
                 geometry.type === 'MultiPolygon') {
-                callback(geometry);
+                callback(geometry, currentIndex);
+                currentIndex++;
             } else if (geometry.type === 'GeometryCollection') {
-                for (j = 0; j < geometry.geometries.length; j++)
-                    callback(geometry.geometries[j]);
+                for (j = 0; j < geometry.geometries.length; j++) {
+                    callback(geometry.geometries[j], currentIndex);
+                    currentIndex++;
+                }
             } else {
                 throw new Error('Unknown Geometry Type');
             }
@@ -2494,6 +2910,79 @@ function geomEach(layer, callback) {
     }
 }
 module.exports.geomEach = geomEach;
+
+/**
+ * Callback for geomReduce
+ *
+ * The first time the callback function is called, the values provided as arguments depend
+ * on whether the reduce method has an initialValue argument.
+ *
+ * If an initialValue is provided to the reduce method:
+ *  - The previousValue argument is initialValue.
+ *  - The currentValue argument is the value of the first element present in the array.
+ *
+ * If an initialValue is not provided:
+ *  - The previousValue argument is the value of the first element present in the array.
+ *  - The currentValue argument is the value of the second element present in the array.
+ *
+ * @private
+ * @callback geomReduceCallback
+ * @param {*} previousValue The accumulated value previously returned in the last invocation
+ * of the callback, or initialValue, if supplied.
+ * @param {*} currentGeometry The current Feature being processed.
+ * @param {number} currentIndex The index of the current element being processed in the
+ * array.Starts at index 0, if an initialValue is provided, and at index 1 otherwise.
+ */
+
+/**
+ * Reduce geometry in any GeoJSON object, similar to Array.reduce().
+ *
+ * @name geomReduce
+ * @param {Object} layer any GeoJSON object
+ * @param {Function} callback a method that takes (previousValue, currentGeometry, currentIndex)
+ * @param {*} [initialValue] Value to use as the first argument to the first call of the callback.
+ * @returns {*} The value that results from the reduction.
+ * @example
+ * var features = {
+ *   "type": "FeatureCollection",
+ *   "features": [
+ *     {
+ *       "type": "Feature",
+ *       "properties": {"foo": "bar"},
+ *       "geometry": {
+ *         "type": "Point",
+ *         "coordinates": [26, 37]
+ *       }
+ *     },
+ *     {
+ *       "type": "Feature",
+ *       "properties": {"hello": "world"},
+ *       "geometry": {
+ *         "type": "Point",
+ *         "coordinates": [36, 53]
+ *       }
+ *     }
+ *   ]
+ * };
+ * turf.geomReduce(features, function (previousValue, currentGeometry, currentIndex) {
+ *   //=previousValue
+ *   //=currentGeometry
+ *   //=currentIndex
+ *   return currentGeometry
+ * });
+ */
+function geomReduce(layer, callback, initialValue) {
+    var previousValue = initialValue;
+    geomEach(layer, function (currentGeometry, currentIndex) {
+        if (currentIndex === 0 && initialValue === undefined) {
+            previousValue = currentGeometry;
+        } else {
+            previousValue = callback(previousValue, currentGeometry, currentIndex);
+        }
+    });
+    return previousValue;
+}
+module.exports.geomReduce = geomReduce;
 
 },{}],13:[function(require,module,exports){
 // (c) Dean McNamee <dean@gmail.com>, 2012.
@@ -43577,7 +44066,16 @@ SuperCluster.prototype = {
         radius: 40,   // cluster radius in pixels
         extent: 512,  // tile extent (radius is calculated relative to it)
         nodeSize: 64, // size of the KD-tree leaf node, affects performance
-        log: false    // whether to log timing info
+        log: false,   // whether to log timing info
+
+        // a reduce function for calculating custom cluster properties
+        reduce: null, // function (accumulated, props) { accumulated.sum += props.sum; }
+
+        // initial properties of a cluster (before running the reducer)
+        initial: function () { return {}; }, // function () { return {sum: 0}; },
+
+        // properties to use for individual points when running the reducer
+        map: function (props) { return props; } // function (props) { return {sum: props.my_value}; },
     },
 
     load: function (points) {
@@ -43621,9 +44119,33 @@ SuperCluster.prototype = {
         var clusters = [];
         for (var i = 0; i < ids.length; i++) {
             var c = tree.points[ids[i]];
-            clusters.push(c.id !== -1 ? this.points[c.id] : getClusterJSON(c));
+            clusters.push(c.numPoints ? getClusterJSON(c) : this.points[c.id]);
         }
         return clusters;
+    },
+
+    getChildren: function (clusterId, clusterZoom) {
+        var origin = this.trees[clusterZoom + 1].points[clusterId];
+        var r = this.options.radius / (this.options.extent * Math.pow(2, clusterZoom));
+        var points = this.trees[clusterZoom + 1].within(origin.x, origin.y, r);
+        var children = [];
+        for (var i = 0; i < points.length; i++) {
+            var c = this.trees[clusterZoom + 1].points[points[i]];
+            if (c.parentId === clusterId) {
+                children.push(c.numPoints ? getClusterJSON(c) : this.points[c.id]);
+            }
+        }
+        return children;
+    },
+
+    getLeaves: function (clusterId, clusterZoom, limit, offset) {
+        limit = limit || 10;
+        offset = offset || 0;
+
+        var leaves = [];
+        this._appendLeaves(leaves, clusterId, clusterZoom, limit, offset, 0);
+
+        return leaves;
     },
 
     getTile: function (z, x, y) {
@@ -43657,6 +44179,45 @@ SuperCluster.prototype = {
         return tile.features.length ? tile : null;
     },
 
+    getClusterExpansionZoom: function (clusterId, clusterZoom) {
+        while (clusterZoom < this.options.maxZoom) {
+            var children = this.getChildren(clusterId, clusterZoom);
+            clusterZoom++;
+            if (children.length !== 1) break;
+            clusterId = children[0].properties.cluster_id;
+        }
+        return clusterZoom;
+    },
+
+    _appendLeaves: function (result, clusterId, clusterZoom, limit, offset, skipped) {
+        var children = this.getChildren(clusterId, clusterZoom);
+
+        for (var i = 0; i < children.length; i++) {
+            var props = children[i].properties;
+
+            if (props.cluster) {
+                if (skipped + props.point_count <= offset) {
+                    // skip the whole cluster
+                    skipped += props.point_count;
+                } else {
+                    // enter the cluster
+                    skipped = this._appendLeaves(
+                        result, props.cluster_id, clusterZoom + 1, limit, offset, skipped);
+                    // exit the cluster
+                }
+            } else if (skipped < offset) {
+                // skip a single point
+                skipped++;
+            } else {
+                // add a single point
+                result.push(children[i]);
+            }
+            if (result.length === limit) break;
+        }
+
+        return skipped;
+    },
+
     _addTileFeatures: function (ids, points, x, y, z2, tile) {
         for (var i = 0; i < ids.length; i++) {
             var c = points[ids[i]];
@@ -43666,7 +44227,7 @@ SuperCluster.prototype = {
                     Math.round(this.options.extent * (c.x * z2 - x)),
                     Math.round(this.options.extent * (c.y * z2 - y))
                 ]],
-                tags: c.id !== -1 ? this.points[c.id].properties : getClusterProperties(c)
+                tags: c.numPoints ? getClusterProperties(c) : this.points[c.id].properties
             });
         }
     },
@@ -43690,43 +44251,75 @@ SuperCluster.prototype = {
             var tree = this.trees[zoom + 1];
             var neighborIds = tree.within(p.x, p.y, r);
 
-            var foundNeighbors = false;
-            var numPoints = p.numPoints;
+            var numPoints = p.numPoints || 1;
             var wx = p.x * numPoints;
             var wy = p.y * numPoints;
+
+            var clusterProperties = null;
+
+            if (this.options.reduce) {
+                clusterProperties = this.options.initial();
+                this._accumulate(clusterProperties, p);
+            }
 
             for (var j = 0; j < neighborIds.length; j++) {
                 var b = tree.points[neighborIds[j]];
                 // filter out neighbors that are too far or already processed
                 if (zoom < b.zoom) {
-                    foundNeighbors = true;
+                    var numPoints2 = b.numPoints || 1;
                     b.zoom = zoom; // save the zoom (so it doesn't get processed twice)
-                    wx += b.x * b.numPoints; // accumulate coordinates for calculating weighted center
-                    wy += b.y * b.numPoints;
-                    numPoints += b.numPoints;
+                    wx += b.x * numPoints2; // accumulate coordinates for calculating weighted center
+                    wy += b.y * numPoints2;
+                    numPoints += numPoints2;
+                    b.parentId = i;
+
+                    if (this.options.reduce) {
+                        this._accumulate(clusterProperties, b);
+                    }
                 }
             }
 
-            clusters.push(foundNeighbors ? createCluster(wx / numPoints, wy / numPoints, numPoints, -1) : p);
+            if (numPoints === 1) {
+                clusters.push(p);
+            } else {
+                p.parentId = i;
+                clusters.push(createCluster(wx / numPoints, wy / numPoints, numPoints, i, clusterProperties));
+            }
         }
 
         return clusters;
+    },
+
+    _accumulate: function (clusterProperties, point) {
+        var properties = point.numPoints ?
+            point.properties :
+            this.options.map(this.points[point.id].properties);
+
+        this.options.reduce(clusterProperties, properties);
     }
 };
 
-function createCluster(x, y, numPoints, id) {
+function createCluster(x, y, numPoints, id, properties) {
     return {
         x: x, // weighted cluster center
         y: y,
         zoom: Infinity, // the last zoom the cluster was processed at
-        id: id, // index of the source feature in the original input array
+        id: id, // index of the first child of the cluster in the zoom level tree
+        properties: properties,
+        parentId: -1, // parent cluster id
         numPoints: numPoints
     };
 }
 
-function createPointCluster(p, i) {
+function createPointCluster(p, id) {
     var coords = p.geometry.coordinates;
-    return createCluster(lngX(coords[0]), latY(coords[1]), 1, i);
+    return {
+        x: lngX(coords[0]), // projected point coordinates
+        y: latY(coords[1]),
+        zoom: Infinity, // the last zoom the point was processed at
+        id: id, // index of the source feature in the original input array
+        parentId: -1 // parent cluster id
+    };
 }
 
 function getClusterJSON(cluster) {
@@ -43744,11 +44337,12 @@ function getClusterProperties(cluster) {
     var count = cluster.numPoints;
     var abbrev = count >= 10000 ? Math.round(count / 1000) + 'k' :
                  count >= 1000 ? (Math.round(count / 100) / 10) + 'k' : count;
-    return {
+    return extend(extend({}, cluster.properties), {
         cluster: true,
+        cluster_id: cluster.id,
         point_count: count,
         point_count_abbreviated: abbrev
-    };
+    });
 }
 
 // longitude/latitude to spherical mercator in [0..1] range
@@ -43795,7 +44389,9 @@ function TinyQueue(data, compare) {
     this.length = this.data.length;
     this.compare = compare || defaultCompare;
 
-    if (data) for (var i = Math.floor(this.length / 2); i >= 0; i--) this._down(i);
+    if (this.length > 0) {
+        for (var i = (this.length >> 1); i >= 0; i--) this._down(i);
+    }
 }
 
 function defaultCompare(a, b) {
@@ -43811,11 +44407,14 @@ TinyQueue.prototype = {
     },
 
     pop: function () {
+        if (this.length === 0) return undefined;
         var top = this.data[0];
-        this.data[0] = this.data[this.length - 1];
         this.length--;
+        if (this.length > 0) {
+            this.data[0] = this.data[this.length];
+            this._down(0);
+        }
         this.data.pop();
-        this._down(0);
         return top;
     },
 
@@ -43824,45 +44423,46 @@ TinyQueue.prototype = {
     },
 
     _up: function (pos) {
-        var data = this.data,
-            compare = this.compare;
+        var data = this.data;
+        var compare = this.compare;
+        var item = data[pos];
 
         while (pos > 0) {
-            var parent = Math.floor((pos - 1) / 2);
-            if (compare(data[pos], data[parent]) < 0) {
-                swap(data, parent, pos);
-                pos = parent;
-
-            } else break;
+            var parent = (pos - 1) >> 1;
+            var current = data[parent];
+            if (compare(item, current) >= 0) break;
+            data[pos] = current;
+            pos = parent;
         }
+
+        data[pos] = item;
     },
 
     _down: function (pos) {
-        var data = this.data,
-            compare = this.compare,
-            len = this.length;
+        var data = this.data;
+        var compare = this.compare;
+        var len = this.length;
+        var halfLen = len >> 1;
+        var item = data[pos];
 
-        while (true) {
-            var left = 2 * pos + 1,
-                right = left + 1,
-                min = pos;
+        while (pos < halfLen) {
+            var left = (pos << 1) + 1;
+            var right = left + 1;
+            var best = data[left];
 
-            if (left < len && compare(data[left], data[min]) < 0) min = left;
-            if (right < len && compare(data[right], data[min]) < 0) min = right;
+            if (right < len && compare(data[right], best) < 0) {
+                left = right;
+                best = data[right];
+            }
+            if (compare(best, item) >= 0) break;
 
-            if (min === pos) return;
-
-            swap(data, min, pos);
-            pos = min;
+            data[pos] = best;
+            pos = left;
         }
+
+        data[pos] = item;
     }
 };
-
-function swap(data, i, j) {
-    var tmp = data[i];
-    data[i] = data[j];
-    data[j] = tmp;
-}
 
 },{}],216:[function(require,module,exports){
 module.exports.VectorTile = require('./lib/vectortile.js');
