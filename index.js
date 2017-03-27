@@ -281,6 +281,7 @@ map.on('load', function() {
     }
     centers_to_show.forEach(function(c){
       var rec = document.createElement('p');
+      rec.classList.add('rec-center-listitem')
       rec.innerHTML = `<b><span class="rec-center-name">&#x2605; ${c.properties.name}</b></span> (${c.properties.address})<br /><i>Rec Center</i><br /><i>(${c.properties.opening_hours})</i>`;
       rec.addEventListener('mousedown', function() {
         flyToPolygon(c);
@@ -289,6 +290,7 @@ map.on('load', function() {
     })
     parks_to_show.forEach(function(p){
       var park = document.createElement('p');
+      park.classList.add('park-listitem')
       park.innerHTML = `<b>${p.properties.name}</b><br /><i>${p.properties.class} Park</i><br /><i>(${p.properties.address})</i>`;
       park.addEventListener('mousedown', function() {
         flyToPolygon(p);

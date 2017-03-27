@@ -136,6 +136,13 @@ body {
   margin:0;
 }
 
+.park-listitem {
+  background-color: #fff;
+}
+.rec-center-listitem {
+  background-color: #eef;
+}
+
 .search {
   position: relative;
   left: 5px;
