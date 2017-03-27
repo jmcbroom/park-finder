@@ -280,15 +280,15 @@ map.on('load', function() {
       parkList.removeChild(parkList.firstChild);
     }
     centers_to_show.forEach(function(c){
-      var rec = document.createElement('span');
-      rec.innerHTML = `<b>${c.properties.name}</b> (${c.properties.address})<br /><i>Rec Center</i><br /><i>(${c.properties.opening_hours})</i>`;
+      var rec = document.createElement('p');
+      rec.innerHTML = `<b><span class="rec-center-name">&#x2605; ${c.properties.name}</b></span> (${c.properties.address})<br /><i>Rec Center</i><br /><i>(${c.properties.opening_hours})</i>`;
       rec.addEventListener('mousedown', function() {
         flyToPolygon(c);
       });
       parkList.appendChild(rec)
     })
     parks_to_show.forEach(function(p){
-      var park = document.createElement('span');
+      var park = document.createElement('p');
       park.innerHTML = `<b>${p.properties.name}</b><br /><i>${p.properties.class} Park</i><br /><i>(${p.properties.address})</i>`;
       park.addEventListener('mousedown', function() {
         flyToPolygon(p);
