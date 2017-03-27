@@ -1,7 +1,7 @@
 var Slideout = require('slideout');
 var mapboxgl = require('mapbox-gl');
+var GeocoderArcGIS = require('geocoder-arcgis');
 var _ = require('lodash');
-var centroid = require('@turf/centroid');
 var bbox = require('@turf/bbox');
 
 var thisSlideout = new Slideout({
@@ -16,6 +16,17 @@ var thisSlideout = new Slideout({
 document.querySelector('.toggle-button').addEventListener('click', function() {
   thisSlideout.toggle();
 });
+
+var geocode_search = document.getElementById('search_geocoder')
+
+// TODO: Listen for suggest
+geocode_search.addEventListener('input', function(){
+  console.log(geocode_search.value)
+})
+
+var geocoder = new GeocoderArcGIS({
+  endpoint: "http://gis.detroitmi.gov/arcgis/rest/services/DoIT/CompositeGeocoder/GeocodeServer"
+})
 
 mapboxgl.accessToken = 'pk.eyJ1IjoiY2l0eW9mZGV0cm9pdCIsImEiOiJjaXZvOWhnM3QwMTQzMnRtdWhyYnk5dTFyIn0.FZMFi0-hvA60KYnI-KivWg';
 
@@ -107,12 +118,7 @@ map.addControl(geolocate, 'bottom-right');
 // do all the things when the map loads
 map.on('load', function() {
 
-  function clickOnPark(p) {
-    // zoom to the park, but not too close
-    var fb = bbox(p.geometry);
-    var flybox = [[fb[0], fb[1]], [fb[2], fb[3]]]
-    map.fitBounds(flybox, { padding: 100, maxZoom: 16 })
-  };
+  var info_window = document.getElementById('info')
 
   // add park and rec center sources
   map.addSource('parks', {
@@ -172,6 +178,7 @@ map.on('load', function() {
     "source": "rec-centers",
     "layout": {
         "icon-image": "star-15",
+        "icon-allow-overlap": true,
         "text-field": "{name}",
         "text-size": {
           stops: [
@@ -180,30 +187,38 @@ map.on('load', function() {
           ]
         },
         "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
-        "text-offset": [0, 1.5],
-        "text-anchor": "bottom"
+        "text-offset": [0.5,0.5 ],
+        "text-anchor": "left"
       },
     "paint": {
-        "text-color": "rgba(40,120,160,0.9)",
-        "text-halo-color": "rgba(240,240,240,0.1)",
-        "text-halo-width": 1.5,
+        "text-color": "rgba(0,0,0,0.9)",
+        "text-halo-color": "rgba(255,255,255,0.9)",
+        "text-halo-width": 2.5,
         "icon-color": "red"
     }
   })
 
-
   function featClicked(feat){
-    console.log(feat)
-    var featCentroid = centroid(feat.geometry)
-    console.log(feat.layer.id)
+    console.log(feat.properties);
     switch (feat.layer.id){
       case 'parks-fill':
+        var amenities = []
+        Object.keys(feat.properties).forEach(function(p){
+          if(feat.properties[p] == 1){
+            console.log(p)
+            amenities.push(FILTERS[p])
+          }
+          // console.log(p, feat.properties[p])
+        })
+        console.log(amenities)
         var html = `
           <span class=""><b>Park: ${feat.properties.name}</b></span><br/>
-          <span class="b">Address: ${feat.properties.address}</span><br/>
+          <span class=""><b>Address:</b> ${feat.properties.address}</span><br/>
+          <span class=""><b>Amenities:</b> ${amenities.join(', ')}</span><br/>
           `;
         break;
       case 'rec-center-symbol':
+
         var html = `
           <span class=""><b>Rec Center: ${feat.properties.name}</b></span><br/>
           <span class="b">Address: ${feat.properties.address}</span><br/>
@@ -211,21 +226,41 @@ map.on('load', function() {
         break;
     }
     console.log(html)
-    var popup = new mapboxgl.Popup();
-    popup.setLngLat(featCentroid.geometry.coordinates).setHTML(html).addTo(map);
+    info_window.innerHTML = html;
   }
 
-  function flyTo(p){
+  function flyToPolygon(p){
     var fb = bbox(p.geometry);
     var flybox = [[fb[0], fb[1]], [fb[2], fb[3]]]
-    map.fitBounds(flybox, { padding: 50, maxZoom: 17 })
+    map.fitBounds(flybox, { padding: 100, maxZoom: 15.25 })
+    featClicked(p)
   }
+
+  geocode_search.addEventListener('keypress', function(e){
+    if(e.key == "Enter"){
+      url = `http://gis.detroitmi.gov/arcgis/rest/services/DoIT/CompositeGeocoder/GeocodeServer/findAddressCandidates?Street=&City=&ZIP=&SingleLine=${geocode_search.value.replace(' ','+')}&outSR=4326&f=json`
+      fetch(url).then(function(response) {
+        return response.json();
+      }).then(function(data) {
+        console.log(data['candidates'][0]['location']);
+        var coords = data['candidates'][0]['location']
+        map.flyTo({
+          center: [coords['x'],coords['y']],
+          zoom: 14
+        });
+      }).catch(function() {
+        console.log("Booo");
+      });
+    }
+  })
+
 
   map.on('click', function (e) {
       var features = map.queryRenderedFeatures(e.point, { layers: ['parks-fill', 'rec-center-symbol'] });
       if (!features.length) {
           return;
       }
+      flyToPolygon(features[0])
       featClicked(features[0])
   });
 
@@ -244,26 +279,21 @@ map.on('load', function() {
     while (parkList.firstChild) {
       parkList.removeChild(parkList.firstChild);
     }
-    parks_to_show.forEach(function(p){
-      var park = document.createElement('span');
-      park.innerHTML = `<b>${p.properties.name}</b><br /><i>(${p.properties.address})</i>`;
-      park.addEventListener('mousedown', function() {
-        flyTo(p);
-      });
-      parkList.appendChild(park)
-    })
-
-    var recList = document.getElementById('rec_centers')
-    while (recList.firstChild) {
-      recList.removeChild(recList.firstChild);
-    }
     centers_to_show.forEach(function(c){
       var rec = document.createElement('span');
-      rec.innerHTML = `<b>${c.properties.name}</b><br /><i>(${c.properties.address})</i><br /><i>(${c.properties.opening_hours})</i>`;
+      rec.innerHTML = `<b>${c.properties.name}</b> (${c.properties.address})<br /><i>Rec Center</i><br /><i>(${c.properties.opening_hours})</i>`;
       rec.addEventListener('mousedown', function() {
-        flyTo(c);
+        flyToPolygon(c);
       });
-      recList.appendChild(rec)
+      parkList.appendChild(rec)
+    })
+    parks_to_show.forEach(function(p){
+      var park = document.createElement('span');
+      park.innerHTML = `<b>${p.properties.name}</b><br /><i>${p.properties.class} Park</i><br /><i>(${p.properties.address})</i>`;
+      park.addEventListener('mousedown', function() {
+        flyToPolygon(p);
+      });
+      parkList.appendChild(park)
     })
   });
 })

@@ -21,16 +21,40 @@
         <img src="./assets/logo.png" style="float:left;"/>
         <span class="site-title">Parks & Rec Finder</soan>
       </div>
-      <div class="nav-title">Search for a place:</div>
-      <div id="search"></div>
+      <div class="nav-title">Search an address/intersection:</div>
+      <div id="search">
+        <input class="search" id="search_geocoder"></input>
+      </div>
+      <!-- <div class="nav-title">Activity Filter:</div>
+      <div id="park_filters">
+        <table>
+          <tr>
+            <td><img id='basketball' src="./assets/basketball.svg"></img></td>
+            <td><img id='basketball' src="./assets/baseball.svg"></img></td>
+            <td><img id='basketball' src="./assets/chess.svg"></img></td>
+            <td><img id='basketball' src="./assets/dog_run.svg"></img></td>
+            <td><img id='basketball' src="./assets/horseshoe.svg"></img></td>
+            <td><img id='basketball' src="./assets/natural_area.svg"></img></td>
+          </tr>
+          <tr>
+            <td><img id='basketball' src="./assets/picnic.svg"></img></td>
+            <td><img id='basketball' src="./assets/restrooms.svg"></img></td>
+            <td><img id='basketball' src="./assets/sled_hill.svg"></img></td>
+            <td><img id='basketball' src="./assets/soccer.svg"></img></td>
+            <td><img id='basketball' src="./assets/tennis.svg"></img></td>
+            <td><img id='basketball' src="./assets/trails.svg"></img></td>
+          </tr>
+        </table>
+      </div> -->
       <div class="nav-title">Parks</div>
       <div id="parks"></div>
-      <div class="nav-title">Rec Centers</div>
-      <div id="rec_centers"></div>
+      <!-- <div class="nav-title">Rec Centers</div> -->
+      <!-- <div id="rec_centers"></div> -->
     </nav>
 
     <div id="map-container">
       <button class="toggle-button">☰</button>
+      <div id="info"></div>
       <div id="map" class="map" data-slideout-ignore></div>
     </div>
 

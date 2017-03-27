@@ -100,9 +100,9 @@ body {
 }
 
 .nav-title {
-  font-size: 0.9em;
+  font-size: 1em;
   font-weight: 700;
-  margin: .7em .3em;
+  margin: .7em .5em;
   position: relative;
   border-bottom: 1px dotted black;
 }
@@ -121,7 +121,7 @@ body {
   left: 5px;
   z-index: 1;
   width: 90%;
-  height: 35%;
+  height: 55%;
   background-color: rgba(255,255,255,0.95);
   border: 1px solid rgba(0,0,0,0.2);
   border-radius: 4px;
@@ -129,28 +129,38 @@ body {
 }
 
 #parks span {
-  font: 14px/20px 'Open Sans', Arial, Helvetica, sans-serif;
+  font: 12px/18px 'Open Sans', Arial, Helvetica, sans-serif;
   display: block;
   padding: 5px;
   border-bottom: 1px solid black;
 }
 
-#rec_centers {
+.search {
   position: relative;
-  padding: 10px;
   left: 5px;
-  z-index: 1;
-  width: 90%;
-  height: 25%;
-  background-color: rgba(255,255,255,0.95);
-  border: 1px solid rgba(0,0,0,0.2);
-  border-radius: 4px;
-  overflow-y: scroll;
+  line-height: 1.25em;
+  font-size: 1.3em;
+  font-family: "Open Sans";
+  width: 95%;
 }
 
-#rec_centers span {
-  font: 16px/24px 'Open Sans', Arial, Helvetica, sans-serif;
-  display: block;
+#park_filters img, object {
+  height: 30px;
   padding: 5px;
-  border-bottom: 1px solid black;
+}
+
+#park_filters td {
+  text-align: center;
+}
+
+#info {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  height: 15  0px;
+  width: 200px;
+  z-index: 3;
+  background-color: rgba(255,255,255,0.8);
+  border: 1px solid black;
+  padding: 1em;
 }
