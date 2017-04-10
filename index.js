@@ -112,8 +112,8 @@ var geolocate = new mapboxgl.GeolocateControl({
         enableHighAccuracy: true
     }
 });
-map.addControl(nav, 'bottom-right');
-map.addControl(geolocate, 'bottom-right');
+map.addControl(nav, 'top-right');
+map.addControl(geolocate, 'top-right');
 
 // do all the things when the map loads
 map.on('load', function() {
@@ -123,7 +123,7 @@ map.on('load', function() {
   // add park and rec center sources
   map.addSource('parks', {
     type: 'geojson',
-    data: 'https://gis.detroitmi.gov/arcgis/rest/services/DoIT/ParksDEV/FeatureServer/1/query?where=1%3D1&text=&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&relationParam=&outFields=*&returnGeometry=true&returnTrueCurves=false&maxAllowableOffset=&geometryPrecision=5&outSR=4326&returnIdsOnly=false&returnCountOnly=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&gdbVersion=&returnDistinctValues=false&resultOffset=&resultRecordCount=&f=geojson'
+    data: 'https://gis.detroitmi.gov/arcgis/rest/services/DoIT/ParksDEV/FeatureServer/1/query?where=1%3D1&text=&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&relationParam=&outFields=*&returnGeometry=true&returnTrueCurves=false&maxAllowableOffset=&geometryPrecision=5&outSR=4326&returnIdsOnly=false&returnCountOnly=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&gdbVersion=&returnDistinctValues=false&resultOffset=&f=geojson'
   })
   map.addSource('rec-centers', {
     type: 'geojson',
@@ -187,18 +187,21 @@ map.on('load', function() {
           ]
         },
         "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
-        "text-offset": [0.5,0.5 ],
-        "text-anchor": "left"
+        "text-offset": [0,1.5],
+        "text-anchor": "center"
       },
     "paint": {
         "text-color": "rgba(0,0,0,0.9)",
         "text-halo-color": "rgba(255,255,255,0.9)",
-        "text-halo-width": 2.5,
+        "text-halo-width": 1.5,
         "icon-color": "red"
     }
   })
 
   function featClicked(feat){
+    if(thisSlideout.isOpen()) {
+      thisSlideout.close();
+    }
     console.log(feat.properties);
     switch (feat.layer.id){
       case 'parks-fill':
@@ -221,7 +224,9 @@ map.on('load', function() {
 
         var html = `
           <span class=""><b>Rec Center: ${feat.properties.name}</b></span><br/>
-          <span class="b">Address: ${feat.properties.address}</span><br/>
+          <span class="b"><b>Address:</b> ${feat.properties.address}</span><br/>
+          <span class="b"><b>Amenities:</b> ${feat.properties.activities}</span><br/>
+          <span>${feat.properties.details}</span><br/>
           `;
         break;
     }
@@ -291,7 +296,7 @@ map.on('load', function() {
     parks_to_show.forEach(function(p){
       var park = document.createElement('p');
       park.classList.add('park-listitem')
-      park.innerHTML = `<b>${p.properties.name}</b><br /><i>${p.properties.class} Park</i><br /><i>(${p.properties.address})</i>`;
+      park.innerHTML = `<b>${p.properties.name}</b> (${p.properties.address}) <br /><i>${p.properties.class} Park</i><br />`;
       park.addEventListener('mousedown', function() {
         flyToPolygon(p);
       });

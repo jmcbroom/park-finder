@@ -163,10 +163,9 @@ body {
 
 #info {
   position: fixed;
-  top: 10px;
+  bottom: 30px;
   right: 10px;
-  height: 15  0px;
-  width: 200px;
+  width: 240px;
   z-index: 3;
   background-color: rgba(255,255,255,0.8);
   border: 1px solid black;
