@@ -3,7 +3,7 @@
 
   <head>
     <meta charset="utf-8">
-    <title>Slideout Demo</title>
+    <title>Detroit Parks and Recreation Centers</title>
     <meta http-equiv="cleartype" content="on">
     <meta name="MobileOptimized" content="320">
     <meta name="HandheldFriendly" content="True">
@@ -17,32 +17,45 @@
   <body>
 
     <nav id="menu">
-      <div id="title"><img src="./assets/logo.png" style="float:left;"/><span id="title-text">Parks & Rec Centers</span></div>
-
-      <div id='filter-picker-container' class='panel-container'>
-        <select id='filter-picker' class='filter-picker'>
-          <option value="default">Pick an activity:</option>
-        </select>
+      <div id="title">
+        <img src="./assets/logo.png" style="float:left;"/>
+        <span class="site-title">Parks & Rec Finder</soan>
       </div>
-
-      <p style="text-align:center; margin: 0;">
-        <b><span id="count">0</span></b> park(s)
-        <b>on the map</b> match
-        <b>any of</b> your selected activities:
-      </p>
-
-      <div id='list-container' class='panel-container'>
+      <div class="nav-title">Search an address/intersection:</div>
+      <div id="search">
+        <input class="search" id="search_geocoder"></input>
       </div>
-
-      <div id='detail-container' class='panel-container'>
-      </div>
-
+      <!-- <div class="nav-title">Activity Filter:</div> -->
+      <!-- <div id="park_filters">
+        <table>
+          <tr>
+            <td><img id='basketball' src="./assets/basketball.svg"></img></td>
+            <td><img id='basketball' src="./assets/baseball.svg"></img></td>
+            <td><img id='basketball' src="./assets/chess.svg"></img></td>
+            <td><img id='basketball' src="./assets/dog_run.svg"></img></td>
+            <td><img id='basketball' src="./assets/horseshoe.svg"></img></td>
+            <td><img id='basketball' src="./assets/natural_area.svg"></img></td>
+          </tr>
+          <tr>
+            <td><img id='basketball' src="./assets/picnic.svg"></img></td>
+            <td><img id='basketball' src="./assets/restrooms.svg"></img></td>
+            <td><img id='basketball' src="./assets/sled_hill.svg"></img></td>
+            <td><img id='basketball' src="./assets/soccer.svg"></img></td>
+            <td><img id='basketball' src="./assets/tennis.svg"></img></td>
+            <td><img id='basketball' src="./assets/trails.svg"></img></td>
+          </tr>
+        </table>
+      </div> -->
+      <div class="nav-title">Parks & Rec Centers</div>
+      <div id="parks"></div>
+      <!-- <div class="nav-title">Rec Centers</div> -->
+      <!-- <div id="rec_centers"></div> -->
     </nav>
 
     <div id="map-container">
       <button class="toggle-button">☰</button>
-      <div id="map" class="map" data-slideout-ignore>
-      </div>
+      <div id="info"></div>
+      <div id="map" class="map" data-slideout-ignore></div>
     </div>
 
     <script src="bundle.js"></script>

@@ -1,13 +1,14 @@
 var Slideout = require('slideout');
 var mapboxgl = require('mapbox-gl');
+var GeocoderArcGIS = require('geocoder-arcgis');
 var _ = require('lodash');
-var centroid = require('@turf/centroid');
 var bbox = require('@turf/bbox');
 
 var thisSlideout = new Slideout({
   'panel': document.getElementById('map-container'),
   'menu': document.getElementById('menu'),
-  'padding': 300,
+  'touch': true,
+  'padding': 320,
   'tolerance': 70
 });
 
@@ -15,6 +16,17 @@ var thisSlideout = new Slideout({
 document.querySelector('.toggle-button').addEventListener('click', function() {
   thisSlideout.toggle();
 });
+
+var geocode_search = document.getElementById('search_geocoder')
+
+// TODO: Listen for suggest
+geocode_search.addEventListener('input', function(){
+  console.log(geocode_search.value)
+})
+
+var geocoder = new GeocoderArcGIS({
+  endpoint: "http://gis.detroitmi.gov/arcgis/rest/services/DoIT/CompositeGeocoder/GeocodeServer"
+})
 
 mapboxgl.accessToken = 'pk.eyJ1IjoiY2l0eW9mZGV0cm9pdCIsImEiOiJjaXZvOWhnM3QwMTQzMnRtdWhyYnk5dTFyIn0.FZMFi0-hvA60KYnI-KivWg';
 
@@ -33,34 +45,64 @@ var map = new mapboxgl.Map({
     ]
 });
 
+function getUniqueFeatures(array, comparatorProperty) {
+    var existingFeatureKeys = {};
+    // Because features come from tiled vector data, feature geometries may be split
+    // or duplicated across tile boundaries and, as a result, features may appear
+    // multiple times in query results.
+    var uniqueFeatures = array.filter(function(el) {
+        if (existingFeatureKeys[el.properties[comparatorProperty]]) {
+            return false;
+        } else {
+            existingFeatureKeys[el.properties[comparatorProperty]] = true;
+            return true;
+        }
+    });
+    // sort them alphabetically
+    return _.sortBy(uniqueFeatures, [function(f) { return f.properties.name; }]);
+}
+
+// i found this on stack overflow. extends the DOM to add a .remove() function for a NodeList
+// https://stackoverflow.com/questions/3387427/remove-element-by-id
+Element.prototype.remove = function() {
+  this.parentElement.removeChild(this);
+}
+NodeList.prototype.remove = HTMLCollection.prototype.remove = function() {
+    for(var i = this.length - 1; i >= 0; i--) {
+        if(this[i] && this[i].parentElement) {
+            this[i].parentElement.removeChild(this[i]);
+        }
+    }
+}
+
 // lookup object for the filters.
 var FILTERS = {
-  "aerobics": "Aerobics",
-  "archery": "Archery",
+  // "aerobics": "Aerobics",
+  // "archery": "Archery",
   "baseball": "Baseball",
   "basketball": "Basketball",
-  "boxing": "Boxing",
+  // "boxing": "Boxing",
   "chess": "Chess",
-  "dance": "Dance",
+  // "dance": "Dance",
   "dog_run": "Dog Park",
   "golf": "Golf",
   "horseshoes": "Horseshoes",
-  "lacrosse": "Lacrosse",
-  "nature": "Nature",
-  "racquetball": "Racquetball",
+  // "lacrosse": "Lacrosse",
+  "natural_area": "Nature Area",
+  // "racquetball": "Racquetball",
   "picnic": "Picnic Tables",
   "playground": "Playground",
-  "pool": "Pool",
+  // "pool": "Pool",
   "restrooms": "Restrooms",
   "sled_hill": "Sled Hill",
   "soccer": "Soccer",
   "tennis": "Tennis",
   "trails": "Trails",
-  "volleyball": "Volleyball",
-  "walking": "Walking",
-  "weights": "Weights",
-  "yoga": "Yoga",
-  "zumba": "Zumba"
+  // "volleyball": "Volleyball",
+  "walking": "Walking"
+  // "weights": "Weights",
+  // "yoga": "Yoga",
+  // "zumba": "Zumba"
 }
 
 // add nav and geolocation controls to the map
@@ -70,22 +112,25 @@ var geolocate = new mapboxgl.GeolocateControl({
         enableHighAccuracy: true
     }
 });
-map.addControl(nav, 'bottom-right');
-map.addControl(geolocate, 'bottom-right');
-
-var popup = new mapboxgl.Popup({
-    closeButton: false
-});
+map.addControl(nav, 'top-right');
+map.addControl(geolocate, 'top-right');
 
 // do all the things when the map loads
 map.on('load', function() {
-  // add the GeoJSON from our ArcServer
+
+  var info_window = document.getElementById('info')
+
+  // add park and rec center sources
   map.addSource('parks', {
     type: 'geojson',
-    data: 'https://gis.detroitmi.gov/arcgis/rest/services/Parks/ParksAndRec/MapServer/0/query?where=1%3D1&text=&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&relationParam=&outFields=*&returnGeometry=true&returnTrueCurves=false&maxAllowableOffset=&geometryPrecision=5&outSR=4326&returnIdsOnly=false&returnCountOnly=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&gdbVersion=&returnDistinctValues=false&resultOffset=&resultRecordCount=&f=geojson'
+    data: 'https://gis.detroitmi.gov/arcgis/rest/services/DoIT/ParksDEV/FeatureServer/1/query?where=1%3D1&text=&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&relationParam=&outFields=*&returnGeometry=true&returnTrueCurves=false&maxAllowableOffset=&geometryPrecision=5&outSR=4326&returnIdsOnly=false&returnCountOnly=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&gdbVersion=&returnDistinctValues=false&resultOffset=&f=geojson'
+  })
+  map.addSource('rec-centers', {
+    type: 'geojson',
+    data: 'https://gis.detroitmi.gov/arcgis/rest/services/DoIT/ParksDEV/FeatureServer/0/query?where=1%3D1&text=&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&relationParam=&outFields=*&returnGeometry=true&returnTrueCurves=false&maxAllowableOffset=&geometryPrecision=5&outSR=4326&returnIdsOnly=false&returnCountOnly=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&gdbVersion=&returnDistinctValues=false&resultOffset=&resultRecordCount=&f=geojson'
   })
 
-  // add a fill layer
+  // add parks fill & line layer
   map.addLayer({
     "id": "parks-fill",
     "type": "fill",
@@ -95,11 +140,14 @@ map.on('load', function() {
     },
     "paint": {
         "fill-color": "green",
-        "fill-opacity": 0.25
+        "fill-opacity": {
+          stops: [
+            [8, 0.05],
+            [18, 0.3]
+          ]
+        }
     }
   })
-
-  // add an outline layer
   map.addLayer({
     "id": "parks-line",
     "type": "line",
@@ -123,238 +171,136 @@ map.on('load', function() {
     }
   })
 
-  // vars for containers
-  var filterPicker = document.getElementById('filter-picker');
-  var filterPickerContainer = document.getElementById('filter-picker-container');
-  var parkList = document.getElementById('list-container');
-  var parkDetails = document.getElementById('detail-container');
+  // add a rec center point layer
+  map.addLayer({
+    "id": "rec-center-symbol",
+    "type": "symbol",
+    "source": "rec-centers",
+    "layout": {
+        "icon-image": "star-15",
+        "icon-allow-overlap": true,
+        "text-field": "{name}",
+        "text-size": {
+          stops: [
+            [10, 12],
+            [20, 24]
+          ]
+        },
+        "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
+        "text-offset": [0,1.5],
+        "text-anchor": "center"
+      },
+    "paint": {
+        "text-color": "rgba(0,0,0,0.9)",
+        "text-halo-color": "rgba(255,255,255,0.9)",
+        "text-halo-width": 1.5,
+        "icon-color": "red"
+    }
+  })
 
-  // // this button resets everything
-  // var resetButton = document.getElementById('reset');
-  // resetButton.addEventListener('click', function() {resetMap();});
-  //
-  // // this button zooms out to Detroit
-  // var zoomButton = document.getElementById('zoomToCity');
-  // zoomButton.addEventListener('click', function() {zoomToCity();});
-
-  // start with no filter, and no picked filters
-  var filter = null;
-  var pickedFilters = [];
-
-  // i found this on stack overflow. extends the DOM to add a .remove() function for a NodeList
-  // https://stackoverflow.com/questions/3387427/remove-element-by-id
-  Element.prototype.remove = function() {
-    this.parentElement.removeChild(this);
-  }
-  NodeList.prototype.remove = HTMLCollection.prototype.remove = function() {
-      for(var i = this.length - 1; i >= 0; i--) {
-          if(this[i] && this[i].parentElement) {
-              this[i].parentElement.removeChild(this[i]);
+  function featClicked(feat){
+    if(thisSlideout.isOpen()) {
+      thisSlideout.close();
+    }
+    console.log(feat.properties);
+    switch (feat.layer.id){
+      case 'parks-fill':
+        var amenities = []
+        Object.keys(feat.properties).forEach(function(p){
+          if(feat.properties[p] == 1){
+            console.log(p)
+            amenities.push(FILTERS[p])
           }
-      }
+          // console.log(p, feat.properties[p])
+        })
+        console.log(amenities)
+        var html = `
+          <span class=""><b>Park: ${feat.properties.name}</b></span><br/>
+          <span class=""><b>Address:</b> ${feat.properties.address}</span><br/>
+          <span class=""><b>Amenities:</b> ${amenities.join(', ')}</span><br/>
+          `;
+        break;
+      case 'rec-center-symbol':
+
+        var html = `
+          <span class=""><b>Rec Center: ${feat.properties.name}</b></span><br/>
+          <span class="b"><b>Address:</b> ${feat.properties.address}</span><br/>
+          <span class="b"><b>Amenities:</b> ${feat.properties.activities}</span><br/>
+          <span>${feat.properties.details}</span><br/>
+          `;
+        break;
+    }
+    console.log(html)
+    info_window.innerHTML = html;
   }
 
-  // this is from the Mapbox example for "list all rendered features"
-  // https://www.mapbox.com/mapbox-gl-js/example/filter-features-within-map-view/
-  function getUniqueFeatures(array, comparatorProperty) {
-      var existingFeatureKeys = {};
-      // Because features come from tiled vector data, feature geometries may be split
-      // or duplicated across tile boundaries and, as a result, features may appear
-      // multiple times in query results.
-      var uniqueFeatures = array.filter(function(el) {
-          if (existingFeatureKeys[el.properties[comparatorProperty]]) {
-              return false;
-          } else {
-              existingFeatureKeys[el.properties[comparatorProperty]] = true;
-              return true;
-          }
-      });
-      // sort them alphabetically
-      return _.sortBy(uniqueFeatures, [function(f) { return f.properties.name; }]);
-  }
-
-  // when you click on a park, fly to it and populate the details-container
-  function clickOnPark(p) {
-    // zoom to the park, but not too close
+  function flyToPolygon(p){
     var fb = bbox(p.geometry);
     var flybox = [[fb[0], fb[1]], [fb[2], fb[3]]]
-    map.fitBounds(flybox, { padding: 50, maxZoom: 17 })
-
-
-    // get all the amenities for the park
-    var parkAmenities = [];
-    Object.keys(p.properties).forEach(function(a){
-      if (p.properties[a] == 1) {
-        parkAmenities.push(FILTERS[a]);
-      }
-    });
-
-    // html for all parks
-    var parkHtml = `
-    <span>Park name: <b>${p.properties.name}</b></span>
-    <span>Address: <b>${p.properties.address}</b></span>
-    <hr>
-    <span><b>Available activities:<br/></b> ${parkAmenities.join(', ')}</span>
-    `
-
-    // if it has a rec center, toss this in there
-    if (p.properties.rec_center_name != 'null') {
-      var recCtrHtml = `
-        <span><b>Recreation Center:</b><br/> ${p.properties.rec_center_name}</span>
-        <span><b>Hours of Operation:</b><br/> ${p.properties.opening_hours}</span>
-        <br/>
-      `
-      parkDetails.innerHTML = recCtrHtml + parkHtml;
-    }
-    else {
-      parkDetails.innerHTML = parkHtml;
-    };
-
-    if (window.innerWidth < 768) {
-      thisSlideout.open();
-    }
+    map.fitBounds(flybox, { padding: 100, maxZoom: 15.25 })
+    featClicked(p)
   }
 
+  geocode_search.addEventListener('keypress', function(e){
+    if(e.key == "Enter"){
+      url = `http://gis.detroitmi.gov/arcgis/rest/services/DoIT/CompositeGeocoder/GeocodeServer/findAddressCandidates?Street=&City=&ZIP=&SingleLine=${geocode_search.value.replace(' ','+')}&outSR=4326&f=json`
+      fetch(url).then(function(response) {
+        return response.json();
+      }).then(function(data) {
+        console.log(data['candidates'][0]['location']);
+        var coords = data['candidates'][0]['location']
+        map.flyTo({
+          center: [coords['x'],coords['y']],
+          zoom: 14
+        });
+      }).catch(function() {
+        console.log("Booo");
+      });
+    }
+  })
 
-  function resetMap() {
-    zoomToCity();
 
-    // remove filters
-    map.setFilter('parks-fill', null);
-    map.setFilter('parks-line', null);
+  map.on('click', function (e) {
+      var features = map.queryRenderedFeatures(e.point, { layers: ['parks-fill', 'rec-center-symbol'] });
+      if (!features.length) {
+          return;
+      }
+      flyToPolygon(features[0])
+      featClicked(features[0])
+  });
 
-    // remove filter items
-    var filtersToRemove = document.getElementsByClassName("filter-item").remove();
 
-    // clear park details
-    parkDetails.innerHTML = '';
-    // clear park list
+  map.on('moveend', function() {
+    var qu_parks = map.queryRenderedFeatures({
+      layers: ['parks-fill'],
+    });
+    var qu_centers = map.queryRenderedFeatures({
+      layers: ['rec-center-symbol'],
+    });
+    var parks_to_show = getUniqueFeatures(qu_parks, 'ogc_fid');
+    var centers_to_show = getUniqueFeatures(qu_centers, 'ogc_fid');
+
+    var parkList = document.getElementById('parks')
     while (parkList.firstChild) {
       parkList.removeChild(parkList.firstChild);
     }
-    // empty pickedFilters
-    pickedFilters = [];
-  }
-
-  function zoomToCity(){
-    map.fitBounds([
-      [-83.2878, 42.2551],
-      [-82.9104, 42.4502]
-    ], { padding: 50})
-  }
-
-  // this fires when the filters change.
-  function filterUpdateHandler() {
-    // set no filter
-    filter = null;
-    // are some filters picked? add the filter
-    if (pickedFilters.length > 0){
-      filter = ['any'];
-      pickedFilters.forEach(function(f){
-        filter.push(['==', f, 1])
+    centers_to_show.forEach(function(c){
+      var rec = document.createElement('p');
+      rec.classList.add('rec-center-listitem')
+      rec.innerHTML = `<b><span class="rec-center-name">&#x2605; ${c.properties.name}</b></span> (${c.properties.address})<br /><i>Rec Center</i><br /><i>(${c.properties.opening_hours})</i>`;
+      rec.addEventListener('mousedown', function() {
+        flyToPolygon(c);
       });
-    }
-    // set that filter
-    map.setFilter('parks-fill', filter);
-    map.setFilter('parks-line', filter);
-
-    // give a slight delay before populating the parks list
-    setTimeout(function(){
-      var parks = map.queryRenderedFeatures({
-          layers: ['parks-fill'],
-          filter: filter
-        });
-
-      // remove all listed parks
-      while (parkList.firstChild) {
-        parkList.removeChild(parkList.firstChild);
-      }
-      // get all the unique rendered parks
-      var features = getUniqueFeatures(parks, 'ogc_fid')
-      var count = document.getElementById('count');
-      count.innerHTML = features.length;
-
-      if (features) {
-        // push them to the list-container
-        features.forEach(function(p){
-          var park = document.createElement('span');
-          park.innerHTML = `<b>${p.properties.name}</b><br /><i>(${p.properties.address})</i>`
-          park.addEventListener('mouseover', function() {
-              // on mouseover, highlight the park on the map
-              var geomCentroid = centroid(p.geometry)
-              popup.setLngLat(centroid(p.geometry).geometry.coordinates)
-                  .setText(p.properties.name + ' (' + p.properties.address + ')')
-                  .addTo(map);
-          });
-          park.addEventListener('mouseout', function() {
-              popup.remove();
-          });
-          // if you click on the entry, we want to fly there and add the details
-          park.addEventListener('click', function() {
-            clickOnPark(p);
-          });
-          parkList.appendChild(park)
-        })
-      }
-    }, 100);
-  }
-
-  // fires when a filter is added
-  function addFilterHandler(e){
-    if (e.target.value == 'default') {
-      return;
-    }
-    var selected = document.createElement('span')
-    selected.textContent = e.target.value + " ";
-    selected.className = "filter-item";
-    selected.id = e.target.selectedOptions[0].id
-    // remove it if you click it
-    selected.onclick = function(){
-      removeFilterHandler(this.id)
-      this.parentNode.removeChild(this);
-    }
-    filterPickerContainer.appendChild(selected);
-    // add the filter to pickedFilters
-    pickedFilters.push(e.target.selectedOptions[0].id)
-    // call the update function
-    filterUpdateHandler();
-  };
-
-  // fires when a filter is removed
-  function removeFilterHandler(id){
-    _.remove(pickedFilters, function(d){
-      return d == id;
-    });
-    // if we remove the last filter, reset the whole thing
-    if (pickedFilters.length == 0) {
-      resetMap();
-    };
-    // call the update function
-    filterUpdateHandler();
-  };
-
-  // call addFilterHandler if you pick a new filter from the dropdown
-  filterPicker.addEventListener('change', function(e){ addFilterHandler(e)} );
-
-  // if you move the map; update the filtered maps
-  map.on('moveend', function() {filterUpdateHandler()});
-
-  // we want to add the park detail if you click on a park
-  map.on('click', function(e){
-    var features = map.queryRenderedFeatures(e.point, { layers: ['parks-fill'] });
-    if (!features.length) {
-        return;
-    }
-    else {
-      clickOnPark(features[0]);
-    }
-  })
-
-  // populate the filter list
-  Object.keys(FILTERS).forEach(function(f){
-    var option = document.createElement('option');
-    option.innerHTML = FILTERS[f];
-    option.id = f;
-    filterPicker.appendChild(option);
-  })
+      parkList.appendChild(rec)
+    })
+    parks_to_show.forEach(function(p){
+      var park = document.createElement('p');
+      park.classList.add('park-listitem')
+      park.innerHTML = `<b>${p.properties.name}</b> (${p.properties.address}) <br /><i>${p.properties.class} Park</i><br />`;
+      park.addEventListener('mousedown', function() {
+        flyToPolygon(p);
+      });
+      parkList.appendChild(park)
+    })
+  });
 })
