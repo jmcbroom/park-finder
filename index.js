@@ -255,6 +255,7 @@ map.on('load', function() {
   });
 
   function updateSidebar() {
+    console.log('updateSidebar()')
     var qu_parks = map.queryRenderedFeatures({
       layers: ['parks-fill'],
     });
@@ -291,4 +292,6 @@ map.on('load', function() {
   map.on('moveend', function() {
     updateSidebar();
   });
+
+  window.setTimeout(map.zoomTo(10.69), 1000);
 })
