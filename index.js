@@ -20,9 +20,9 @@ document.querySelector('.toggle-button').addEventListener('click', function() {
 var geocode_search = document.getElementById('search_geocoder')
 
 // TODO: Listen for suggest
-geocode_search.addEventListener('input', function(){
-  console.log(geocode_search.value)
-})
+// geocode_search.addEventListener('input', function(){
+//   console.log(geocode_search.value)
+// })
 
 var geocoder = new GeocoderArcGIS({
   endpoint: "http://gis.detroitmi.gov/arcgis/rest/services/DoIT/CompositeGeocoder/GeocodeServer"
@@ -33,7 +33,7 @@ mapboxgl.accessToken = 'pk.eyJ1IjoiY2l0eW9mZGV0cm9pdCIsImEiOiJjaXZvOWhnM3QwMTQzM
 // make a map object
 var map = new mapboxgl.Map({
     container: 'map',
-    style: 'mapbox://styles/cityofdetroit/cix0w7n08000v2qpb2q15raq1',
+    style: 'mapbox://styles/cityofdetroit/cj1gxcmoh001h2rr06vhx3dy8',
     zoom: 10.7,
     center: [-83.091, 42.350],
     // :triangular_ruler:
@@ -77,32 +77,21 @@ NodeList.prototype.remove = HTMLCollection.prototype.remove = function() {
 
 // lookup object for the filters.
 var FILTERS = {
-  // "aerobics": "Aerobics",
-  // "archery": "Archery",
   "baseball": "Baseball",
   "basketball": "Basketball",
-  // "boxing": "Boxing",
   "chess": "Chess",
-  // "dance": "Dance",
   "dog_run": "Dog Park",
   "golf": "Golf",
   "horseshoes": "Horseshoes",
-  // "lacrosse": "Lacrosse",
   "natural_area": "Nature Area",
-  // "racquetball": "Racquetball",
   "picnic": "Picnic Tables",
   "playground": "Playground",
-  // "pool": "Pool",
   "restrooms": "Restrooms",
   "sled_hill": "Sled Hill",
   "soccer": "Soccer",
   "tennis": "Tennis",
   "trails": "Trails",
-  // "volleyball": "Volleyball",
   "walking": "Walking"
-  // "weights": "Weights",
-  // "yoga": "Yoga",
-  // "zumba": "Zumba"
 }
 
 // add nav and geolocation controls to the map
@@ -202,23 +191,22 @@ map.on('load', function() {
     if(thisSlideout.isOpen()) {
       thisSlideout.close();
     }
-    console.log(feat.properties);
     switch (feat.layer.id){
       case 'parks-fill':
         var amenities = []
         Object.keys(feat.properties).forEach(function(p){
           if(feat.properties[p] == 1){
-            console.log(p)
             amenities.push(FILTERS[p])
           }
-          // console.log(p, feat.properties[p])
         })
-        console.log(amenities)
         var html = `
           <span class=""><b>Park: ${feat.properties.name}</b></span><br/>
           <span class=""><b>Address:</b> ${feat.properties.address}</span><br/>
           <span class=""><b>Amenities:</b> ${amenities.join(', ')}</span><br/>
           `;
+          // add these for mow dates:
+          // <span class=""><b>Last Mow Date:</b> ${feat.properties.last_mow_date}</span><br/>
+          // <span class=""><b>Next Mow Date:</b> ${feat.properties.next_mow_date}</span><br/>
         break;
       case 'rec-center-symbol':
 
@@ -230,7 +218,6 @@ map.on('load', function() {
           `;
         break;
     }
-    console.log(html)
     info_window.innerHTML = html;
   }
 
@@ -247,7 +234,6 @@ map.on('load', function() {
       fetch(url).then(function(response) {
         return response.json();
       }).then(function(data) {
-        console.log(data['candidates'][0]['location']);
         var coords = data['candidates'][0]['location']
         map.flyTo({
           center: [coords['x'],coords['y']],
@@ -259,7 +245,6 @@ map.on('load', function() {
     }
   })
 
-
   map.on('click', function (e) {
       var features = map.queryRenderedFeatures(e.point, { layers: ['parks-fill', 'rec-center-symbol'] });
       if (!features.length) {
@@ -269,8 +254,8 @@ map.on('load', function() {
       featClicked(features[0])
   });
 
-
-  map.on('moveend', function() {
+  function updateSidebar() {
+    console.log('updateSidebar()')
     var qu_parks = map.queryRenderedFeatures({
       layers: ['parks-fill'],
     });
@@ -287,7 +272,7 @@ map.on('load', function() {
     centers_to_show.forEach(function(c){
       var rec = document.createElement('p');
       rec.classList.add('rec-center-listitem')
-      rec.innerHTML = `<b><span class="rec-center-name">&#x2605; ${c.properties.name}</b></span> (${c.properties.address})<br /><i>Rec Center</i><br /><i>(${c.properties.opening_hours})</i>`;
+      rec.innerHTML = `<b><span class="rec-center-name">&#x2605; ${c.properties.name}</b></span> (${c.properties.address})<br /><i>Rec Center</i><br />${c.properties.opening_hours}`;
       rec.addEventListener('mousedown', function() {
         flyToPolygon(c);
       });
@@ -302,5 +287,11 @@ map.on('load', function() {
       });
       parkList.appendChild(park)
     })
+  }
+
+  map.on('moveend', function() {
+    updateSidebar();
   });
+
+  window.setTimeout(map.zoomTo(10.69), 1000);
 })
