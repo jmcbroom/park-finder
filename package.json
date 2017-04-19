@@ -16,6 +16,7 @@
     "slideout": "^1.0.1"
   },
   "devDependencies": {
+    "babel-preset-env": "^1.4.0",
     "babelify": "^7.3.0"
   }
 }
