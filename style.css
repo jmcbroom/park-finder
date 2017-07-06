@@ -149,6 +149,21 @@ body {
   background-color: rgba(255,172,27,0.5);
 }
 
+.legend-item {
+  margin-left: 1em;
+  padding-left: .5em;
+}
+
+#crc {
+  border-left: 30px solid rgb(0, 153, 204);
+}
+#prc {
+  border-left: 30px solid rgb(220, 148, 255);
+}
+#sfc {
+  border-left: 30px solid rgb(255, 172, 27);
+}
+
 .search {
   position: relative;
   left: 5px;
