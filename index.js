@@ -1,6 +1,5 @@
 var Slideout = require('slideout');
 var mapboxgl = require('mapbox-gl');
-var GeocoderArcGIS = require('geocoder-arcgis');
 var _ = require('lodash');
 var bbox = require('@turf/bbox');
 
@@ -23,10 +22,6 @@ var geocode_search = document.getElementById('search_geocoder')
 // geocode_search.addEventListener('input', function(){
 //   console.log(geocode_search.value)
 // })
-
-var geocoder = new GeocoderArcGIS({
-  endpoint: "http://gis.detroitmi.gov/arcgis/rest/services/DoIT/CompositeGeocoder/GeocodeServer"
-})
 
 mapboxgl.accessToken = 'pk.eyJ1IjoiY2l0eW9mZGV0cm9pdCIsImEiOiJjaXZvOWhnM3QwMTQzMnRtdWhyYnk5dTFyIn0.FZMFi0-hvA60KYnI-KivWg';
 
@@ -230,8 +225,8 @@ map.on('load', function() {
 
   geocode_search.addEventListener('keypress', function(e){
     if(e.key == "Enter"){
-      url = `http://gis.detroitmi.gov/arcgis/rest/services/DoIT/CompositeGeocoder/GeocodeServer/findAddressCandidates?Street=&City=&ZIP=&SingleLine=${geocode_search.value.replace(' ','+')}&outSR=4326&f=json`
-      fetch(url).then(function(response) {
+      var geocode_url = `http://gis.detroitmi.gov/arcgis/rest/services/DoIT/CompositeGeocoder/GeocodeServer/findAddressCandidates?Street=&City=&ZIP=&SingleLine=${geocode_search.value.replace(' ','+')}&outSR=4326&f=json`
+      fetch(geocode_url).then(function(response) {
         return response.json();
       }).then(function(data) {
         var coords = data['candidates'][0]['location']

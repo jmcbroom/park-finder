@@ -9,14 +9,14 @@
   "author": "Jimmy McBroom",
   "license": "ISC",
   "dependencies": {
-    "@turf/bbox": "^3.7.5",
-    "geocoder-arcgis": "^1.1.2",
+    "@turf/bbox": "^3.14.0",
+    "geocoder-arcgis": "^1.2.1",
     "lodash": "^4.17.4",
     "mapbox-gl": "^0.32.1",
     "slideout": "^1.0.1"
   },
   "devDependencies": {
-    "babel-preset-env": "^1.4.0",
+    "babel-preset-env": "^1.6.0",
     "babelify": "^7.3.0"
   }
 }
