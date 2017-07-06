@@ -95,8 +95,9 @@ body {
 #title{
   position: relative;
   top: 0px;
+  margin: 0 auto;
+  padding: 0;
   background: rgba(0, 153, 204, 0.5);
-  height: 50px;
 }
 
 .nav-title {
@@ -108,11 +109,11 @@ body {
 }
 
 .site-title {
-  display: inline-block;
-  margin-top: .3em;
-  margin-left: .3em;
-  font-size: 1.2em;
+  /*margin-left: 1em;*/
+  font-size: 1.25em;
   font-weight: 600;
+  text-align: right;
+  padding: 1em 2em 1em 0em;
 }
 
 #parks {
