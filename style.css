@@ -140,13 +140,13 @@ body {
   background-color: #fff;
 }
 .city-rec-center {
-  background-color: rgba(195,103,133,0.5);
+  background-color: rgba(0, 153, 204, 0.5);
 }
 .partner-rec-center {
-  background-color: rgba(212,128,63,0.5);
+  background-color: rgba(220,148,255,0.5);
 }
 .summer-fun-center {
-  background-color: rgba(141,200,103,0.5);
+  background-color: rgba(255,172,27,0.5);
 }
 
 .search {

@@ -1144,11 +1144,11 @@ map.on('load', function () {
   // add park and rec center sources
   map.addSource('parks', {
     type: 'geojson',
-    data: 'https://services2.arcgis.com/qvkbeam7Wirps6zC/arcgis/rest/services/ParksRec/FeatureServer/1/query?where=1%3D1&text=&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&relationParam=&outFields=*&returnGeometry=true&returnTrueCurves=false&maxAllowableOffset=&geometryPrecision=5&outSR=4326&returnIdsOnly=false&returnCountOnly=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&gdbVersion=&returnDistinctValues=false&resultOffset=&f=geojson'
+    data: 'https://services2.arcgis.com/qvkbeam7Wirps6zC/arcgis/rest/services/ParksRec/FeatureServer/2/query?where=1%3D1&text=&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&relationParam=&outFields=*&returnGeometry=true&returnTrueCurves=false&maxAllowableOffset=&geometryPrecision=5&outSR=4326&returnIdsOnly=false&returnCountOnly=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&gdbVersion=&returnDistinctValues=false&resultOffset=&f=geojson'
   });
   map.addSource('rec-centers', {
     type: 'geojson',
-    data: 'https://services2.arcgis.com/qvkbeam7Wirps6zC/arcgis/rest/services/ParksRec/FeatureServer/0/query?where=1%3D1&text=&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&relationParam=&outFields=*&returnGeometry=true&returnTrueCurves=false&maxAllowableOffset=&geometryPrecision=5&outSR=4326&returnIdsOnly=false&returnCountOnly=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&gdbVersion=&returnDistinctValues=false&resultOffset=&resultRecordCount=&returnCentroid=true&f=geojson'
+    data: 'https://services2.arcgis.com/qvkbeam7Wirps6zC/arcgis/rest/services/ParksRec/FeatureServer/0/query?where=1%3D1&text=&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&relationParam=&outFields=*&returnGeometry=true&returnTrueCurves=false&maxAllowableOffset=&geometryPrecision=5&outSR=4326&returnIdsOnly=false&returnCountOnly=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&gdbVersion=&returnDistinctValues=false&resultOffset=&resultRecordCount=&f=geojson'
   });
 
   // add parks fill & line layer
@@ -1192,13 +1192,15 @@ map.on('load', function () {
       // make circles larger as the user zooms from z12 to z22
       'circle-radius': {
         'base': 1,
-        'stops': [[10, 15], [22, 100]]
+        'stops': [[9, 4], [19, 15]]
       },
+      'circle-stroke-color': 'rgba(0,0,0, 0.6)',
+      'circle-stroke-width': 1.5,
       // color circles by ethnicity, using data-driven styles
       'circle-color': {
         property: 'type',
         type: 'categorical',
-        stops: [['Summer Fun Center', 'rgba(141,200,103,1)'], ['City Rec Center', 'rgba(195,103,133,1)'], ['Partner Rec Center', 'rgba(212,128,63,1)']]
+        stops: [['Summer Fun Center', 'rgba(255,172,27,0.9)'], ['City Rec Center', 'rgba(0, 153, 204, 0.9)'], ['Partner Rec Center', 'rgba(220,148,255,0.9)']]
       }
     }
   });
@@ -1221,7 +1223,9 @@ map.on('load', function () {
         // <span class=""><b>Next Mow Date:</b> ${feat.properties.next_mow_date}</span><br/>
         break;
       case 'rec-center-symbol':
-        var html = '\n          <span class=""><b>' + feat.properties.type + ': ' + feat.properties.name + '</b></span><br/>\n          <span class="b"><b>Address:</b> ' + feat.properties.address + '</span><br/>\n          <span class="b"><b>Amenities:</b> ' + feat.properties.activities + '</span><br/>\n          <span>' + feat.properties.details + '</span><br/>\n          ';
+        var html = '\n          <span class=""><b>' + feat.properties.type + ': ' + feat.properties.name + '</b></span><br/>\n          <span class="b"><b>Address:</b> ' + feat.properties.address + '</span><br/>\n          ';
+        // <span class="b"><b>Amenities:</b> ${feat.properties.activities}</span><br/>
+        // <span>${feat.properties.details}</span><br/>
         break;
     }
     info_window.innerHTML = html;
@@ -1269,7 +1273,8 @@ map.on('load', function () {
       layers: ['rec-center-symbol']
     });
     var parks_to_show = getUniqueFeatures(qu_parks, 'ogc_fid');
-    var centers_to_show = getUniqueFeatures(qu_centers, 'ogc_fid');
+    var centers_to_show = getUniqueFeatures(qu_centers, 'GlobalID');
+    console.log(centers_to_show);
 
     var parkList = document.getElementById('parks');
     while (parkList.firstChild) {
