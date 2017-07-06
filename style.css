@@ -18,6 +18,9 @@ body {
   /*overflow-y: scroll;*/
   /*-webkit-overflow-scrolling: touch;*/
   background-color: rgba(238, 238, 238, 0.5);
+  -webkit-box-shadow: 2px 0px 5px -1px rgba(0, 0, 0, 0.6);
+  -moz-box-shadow: 2px 0px 5px -1px rgba(0, 0, 0, 0.6);
+  box-shadow: 2px 0px 5px -1px rgba(0, 0, 0, 0.6)
 }
 
 .slideout-panel {
