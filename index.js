@@ -107,11 +107,11 @@ map.on('load', function() {
   // add park and rec center sources
   map.addSource('parks', {
     type: 'geojson',
-    data: 'https://gis.detroitmi.gov/arcgis/rest/services/DoIT/ParksDEV/FeatureServer/1/query?where=1%3D1&text=&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&relationParam=&outFields=*&returnGeometry=true&returnTrueCurves=false&maxAllowableOffset=&geometryPrecision=5&outSR=4326&returnIdsOnly=false&returnCountOnly=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&gdbVersion=&returnDistinctValues=false&resultOffset=&f=geojson'
+    data: 'https://services2.arcgis.com/qvkbeam7Wirps6zC/arcgis/rest/services/ParksRec/FeatureServer/1/query?where=1%3D1&text=&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&relationParam=&outFields=*&returnGeometry=true&returnTrueCurves=false&maxAllowableOffset=&geometryPrecision=5&outSR=4326&returnIdsOnly=false&returnCountOnly=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&gdbVersion=&returnDistinctValues=false&resultOffset=&f=geojson'
   })
   map.addSource('rec-centers', {
     type: 'geojson',
-    data: 'https://gis.detroitmi.gov/arcgis/rest/services/DoIT/ParksDEV/FeatureServer/0/query?where=1%3D1&text=&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&relationParam=&outFields=*&returnGeometry=true&returnTrueCurves=false&maxAllowableOffset=&geometryPrecision=5&outSR=4326&returnIdsOnly=false&returnCountOnly=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&gdbVersion=&returnDistinctValues=false&resultOffset=&resultRecordCount=&f=geojson'
+    data: 'https://services2.arcgis.com/qvkbeam7Wirps6zC/arcgis/rest/services/ParksRec/FeatureServer/0/query?where=1%3D1&text=&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&relationParam=&outFields=*&returnGeometry=true&returnTrueCurves=false&maxAllowableOffset=&geometryPrecision=5&outSR=4326&returnIdsOnly=false&returnCountOnly=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&gdbVersion=&returnDistinctValues=false&resultOffset=&resultRecordCount=&returnCentroid=true&f=geojson'
   })
 
   // add parks fill & line layer
@@ -158,27 +158,23 @@ map.on('load', function() {
   // add a rec center point layer
   map.addLayer({
     "id": "rec-center-symbol",
-    "type": "symbol",
+    "type": "circle",
     "source": "rec-centers",
-    "layout": {
-        "icon-image": "star-15",
-        "icon-allow-overlap": true,
-        "text-field": "{name}",
-        "text-size": {
-          stops: [
-            [10, 12],
-            [20, 24]
-          ]
+    'paint': {
+        // make circles larger as the user zooms from z12 to z22
+        'circle-radius': {
+            'base': 1,
+            'stops': [[10, 5], [19, 50]]
         },
-        "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
-        "text-offset": [0,1.5],
-        "text-anchor": "center"
-      },
-    "paint": {
-        "text-color": "rgba(0,0,0,0.9)",
-        "text-halo-color": "rgba(255,255,255,0.9)",
-        "text-halo-width": 1.5,
-        "icon-color": "red"
+        // color circles by ethnicity, using data-driven styles
+        'circle-color': {
+            property: 'type',
+            type: 'categorical',
+            stops: [
+                ['Summer Fun Center', 'rgba(141,200,103,1)'],
+                ['City Rec Center', 'rgba(195,103,133,1)'],
+                ['Partner Rec Center', 'rgba(212,128,63,1)']]
+        }
     }
   })
 
@@ -204,9 +200,8 @@ map.on('load', function() {
           // <span class=""><b>Next Mow Date:</b> ${feat.properties.next_mow_date}</span><br/>
         break;
       case 'rec-center-symbol':
-
         var html = `
-          <span class=""><b>Rec Center: ${feat.properties.name}</b></span><br/>
+          <span class=""><b>${feat.properties.type}: ${feat.properties.name}</b></span><br/>
           <span class="b"><b>Address:</b> ${feat.properties.address}</span><br/>
           <span class="b"><b>Amenities:</b> ${feat.properties.activities}</span><br/>
           <span>${feat.properties.details}</span><br/>
@@ -266,8 +261,8 @@ map.on('load', function() {
     }
     centers_to_show.forEach(function(c){
       var rec = document.createElement('p');
-      rec.classList.add('rec-center-listitem')
-      rec.innerHTML = `<b><span class="rec-center-name">&#x2605; ${c.properties.name}</b></span> (${c.properties.address})<br /><i>Rec Center</i><br />${c.properties.opening_hours}`;
+      rec.classList.add(`${c.properties.type}`.toLowerCase().replace(/\s/g, '-'))
+      rec.innerHTML = `<b><span class="rec-center-name">&#x2605; ${c.properties.name}</b></span> (${c.properties.address})<br /><i>${c.properties.type}</i><br />${c.properties.opening_hours}`;
       rec.addEventListener('mousedown', function() {
         flyToPolygon(c);
       });

@@ -139,8 +139,14 @@ body {
 .park-listitem {
   background-color: #fff;
 }
-.rec-center-listitem {
-  background-color: #eef;
+.city-rec-center {
+  background-color: rgba(195,103,133,0.5);
+}
+.partner-rec-center {
+  background-color: rgba(212,128,63,0.5);
+}
+.summer-fun-center {
+  background-color: rgba(141,200,103,0.5);
 }
 
 .search {
