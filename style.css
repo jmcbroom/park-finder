@@ -3,7 +3,7 @@ body {
   padding:0;
   width: 100%;
   height: 100%;
-  font-family: 'Open Sans', Arial, Helvetica, sans-serif;
+  font-family: 'Roboto', 'Open Sans', Arial, Helvetica, sans-serif;
 }
 
 .slideout-menu {
@@ -17,7 +17,7 @@ body {
   width: 320px;
   /*overflow-y: scroll;*/
   /*-webkit-overflow-scrolling: touch;*/
-  background-color: rgba(238, 238, 238, 0.5);
+  background-color: #f3f3f3;
   -webkit-box-shadow: 2px 0px 5px -1px rgba(0, 0, 0, 0.6);
   -moz-box-shadow: 2px 0px 5px -1px rgba(0, 0, 0, 0.6);
   box-shadow: 2px 0px 5px -1px rgba(0, 0, 0, 0.6)
@@ -100,7 +100,22 @@ body {
   top: 0px;
   margin: 0 auto;
   padding: 0;
-  background: rgba(0, 153, 204, 0.5);
+  background: #09c;
+  color: white;
+}
+
+.tagline{
+  text-align: center;
+  font-size: 0.9em;
+  margin-top: -20px;
+  padding-bottom: 20px;
+}
+
+.logo{
+  float: left;
+  max-width: 70px;
+  margin-left: 23px;
+  margin-top: 5px;
 }
 
 .nav-title {
@@ -114,22 +129,22 @@ body {
 .site-title {
   /*margin-left: 1em;*/
   font-size: 1.25em;
-  font-weight: 600;
-  text-align: right;
-  padding: 1em 2em 1em 0em;
+  font-weight: 700;
+  text-align: center;
+  padding: 1.2em 2em 1em 0em;
 }
 
 #parks {
   position: relative;
-  padding: 10px;
-  left: 5px;
+  /*padding: 10px;*/
+  left: 13px;
   z-index: 1;
-  width: 90%;
+  width: 91%;
   height: 55%;
   background-color: rgba(255,255,255,0.95);
   border: 1px solid rgba(0,0,0,0.2);
   border-radius: 4px;
-  overflow-y: scroll;
+  overflow-y: auto;
 }
 
 #parks p {
@@ -158,23 +173,34 @@ body {
   padding-left: .5em;
 }
 
+.legend-color{
+  width:23px;
+  height: 23px;
+  border-radius: 50%;
+  margin-right: 10px;
+  float: left;
+  border: 1px solid rgba(50, 50, 50, 0.8);
+}
+
 #crc {
-  border-left: 30px solid rgb(0, 153, 204);
+  background: rgb(0, 153, 204);
 }
 #prc {
-  border-left: 30px solid rgb(220, 148, 255);
+  background: rgb(220, 148, 255);
 }
 #sfc {
-  border-left: 30px solid rgb(255, 172, 27);
+  background: rgb(255, 172, 27);
 }
 
 .search {
   position: relative;
-  left: 5px;
+  left: 13px;
   line-height: 1.25em;
   font-size: 1.3em;
   font-family: "Open Sans";
-  width: 95%;
+  width: 91%;
+  border-radius: 3px;
+  border: 1px solid rgba(100,100,100, .75);
 }
 
 #park_filters img, object {
