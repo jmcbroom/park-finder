@@ -112,7 +112,7 @@ map.on('load', function () {
   });
   map.addSource('rec-centers', {
     type: 'geojson',
-    data: 'https://services2.arcgis.com/qvkbeam7Wirps6zC/arcgis/rest/services/ParksRec/FeatureServer/0/query?where=%22type%22+not+in+%28%27Summer+Fun+Center%27%29&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&resultType=none&distance=0.0&units=esriSRUnit_Meter&returnGeodetic=false&outFields=*&returnGeometry=true&multipatchOption=xyFootprint&maxAllowableOffset=&geometryPrecision=&outSR=4326&returnIdsOnly=false&returnCountOnly=false&returnExtentOnly=false&returnDistinctValues=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&resultOffset=&resultRecordCount=&returnZ=false&returnM=false&quantizationParameters=&sqlFormat=none&f=pgeojson'
+    data: 'https://services2.arcgis.com/qvkbeam7Wirps6zC/arcgis/rest/services/RecCentersFall2017/FeatureServer/0/query?where=type+not+in+%28%27Summer+Fun+Center%27%29&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&resultType=none&distance=0.0&units=esriSRUnit_Meter&returnGeodetic=false&outFields=*&returnHiddenFields=false&returnGeometry=true&multipatchOption=xyFootprint&maxAllowableOffset=&geometryPrecision=&outSR=4326&datumTransformation=&returnIdsOnly=false&returnCountOnly=false&returnExtentOnly=false&returnDistinctValues=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&having=&resultOffset=&resultRecordCount=&returnZ=false&returnM=false&returnExceededLimitFeatures=true&quantizationParameters=&sqlFormat=none&f=pgeojson'
   });
 
   // add parks fill & line layer
@@ -160,13 +160,10 @@ map.on('load', function () {
       },
       'circle-stroke-color': 'rgba(0,0,0, 0.6)',
       'circle-stroke-width': 1.5,
-      // color circles by ethnicity, using data-driven styles
       'circle-color': {
         property: 'type',
         type: 'categorical',
-        stops: [
-        // ['Summer Fun Center', 'rgba(255,172,27,0.9)'],
-        ['City Rec Center', 'rgba(0, 153, 204, 0.9)'], ['Partner Rec Center', 'rgba(220,148,255,0.9)']]
+        stops: [['After School Center', 'rgba(255,172,27,0.9)'], ['City Rec Center', 'rgba(0, 153, 204, 0.9)'], ['Partner Rec Center', 'rgba(220,148,255,0.9)']]
       }
     }
   });
@@ -206,7 +203,7 @@ map.on('load', function () {
 
   geocode_search.addEventListener('keypress', function (e) {
     if (e.key == "Enter") {
-      var geocode_url = 'http://gis.detroitmi.gov/arcgis/rest/services/DoIT/CompositeGeocoder/GeocodeServer/findAddressCandidates?Street=&City=&ZIP=&SingleLine=' + geocode_search.value.replace(' ', '+') + '&outSR=4326&f=json';
+      var geocode_url = 'https://gis.detroitmi.gov/arcgis/rest/services/DoIT/CompositeGeocoder/GeocodeServer/findAddressCandidates?Street=&City=&ZIP=&SingleLine=' + geocode_search.value.replace(' ', '+') + '&outSR=4326&f=json';
       fetch(geocode_url).then(function (response) {
         return response.json();
       }).then(function (data) {
@@ -239,7 +236,7 @@ map.on('load', function () {
       layers: ['rec-center-symbol']
     });
     var parks_to_show = getUniqueFeatures(qu_parks, 'ogc_fid');
-    var centers_to_show = getUniqueFeatures(qu_centers, 'GlobalID');
+    var centers_to_show = getUniqueFeatures(qu_centers, 'name');
     console.log(centers_to_show);
 
     var parkList = document.getElementById('parks');
