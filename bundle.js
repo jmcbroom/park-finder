@@ -111,22 +111,10 @@ exports.normalize = function(path) {
   return (isAbsolute ? '/' : '') + path;
 };
 
-<<<<<<< HEAD
 // posix version
 exports.isAbsolute = function(path) {
   return path.charAt(0) === '/';
 };
-=======
-  // add park and rec center sources
-  map.addSource('parks', {
-    type: 'geojson',
-    data: 'https://services2.arcgis.com/qvkbeam7Wirps6zC/arcgis/rest/services/ParksRec/FeatureServer/2/query?where=1%3D1&text=&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&relationParam=&outFields=*&returnGeometry=true&returnTrueCurves=false&maxAllowableOffset=&geometryPrecision=5&outSR=4326&returnIdsOnly=false&returnCountOnly=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&gdbVersion=&returnDistinctValues=false&resultOffset=&f=geojson'
-  });
-  map.addSource('rec-centers', {
-    type: 'geojson',
-    data: 'https://services2.arcgis.com/qvkbeam7Wirps6zC/arcgis/rest/services/RecCentersFall2017/FeatureServer/0/query?where=type+not+in+%28%27Summer+Fun+Center%27%29&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&resultType=none&distance=0.0&units=esriSRUnit_Meter&returnGeodetic=false&outFields=*&returnHiddenFields=false&returnGeometry=true&multipatchOption=xyFootprint&maxAllowableOffset=&geometryPrecision=&outSR=4326&datumTransformation=&returnIdsOnly=false&returnCountOnly=false&returnExtentOnly=false&returnDistinctValues=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&having=&resultOffset=&resultRecordCount=&returnZ=false&returnM=false&returnExceededLimitFeatures=true&quantizationParameters=&sqlFormat=none&f=pgeojson'
-  });
->>>>>>> parent of 3e2e084... Revert "latch :key:"
 
 // posix version
 exports.join = function() {
@@ -139,7 +127,6 @@ exports.join = function() {
   }).join('/'));
 };
 
-<<<<<<< HEAD
 
 // path.relative(from, to)
 // posix version
@@ -151,26 +138,6 @@ exports.relative = function(from, to) {
     var start = 0;
     for (; start < arr.length; start++) {
       if (arr[start] !== '') break;
-=======
-  // add a rec center point layer
-  map.addLayer({
-    "id": "rec-center-symbol",
-    "type": "circle",
-    "source": "rec-centers",
-    'paint': {
-      // make circles larger as the user zooms from z12 to z22
-      'circle-radius': {
-        'base': 1,
-        'stops': [[9, 4], [19, 15]]
-      },
-      'circle-stroke-color': 'rgba(0,0,0, 0.6)',
-      'circle-stroke-width': 1.5,
-      'circle-color': {
-        property: 'type',
-        type: 'categorical',
-        stops: [['After School Center', 'rgba(255,172,27,0.9)'], ['City Rec Center', 'rgba(0, 153, 204, 0.9)'], ['Partner Rec Center', 'rgba(220,148,255,0.9)']]
-      }
->>>>>>> parent of 3e2e084... Revert "latch :key:"
     }
 
     var end = arr.length - 1;
@@ -199,46 +166,13 @@ exports.relative = function(from, to) {
     outputParts.push('..');
   }
 
-<<<<<<< HEAD
   outputParts = outputParts.concat(toParts.slice(samePartsLength));
-=======
-  geocode_search.addEventListener('keypress', function (e) {
-    if (e.key == "Enter") {
-      var geocode_url = 'https://gis.detroitmi.gov/arcgis/rest/services/DoIT/CompositeGeocoder/GeocodeServer/findAddressCandidates?Street=&City=&ZIP=&SingleLine=' + geocode_search.value.replace(' ', '+') + '&outSR=4326&f=json';
-      fetch(geocode_url).then(function (response) {
-        return response.json();
-      }).then(function (data) {
-        var coords = data['candidates'][0]['location'];
-        map.flyTo({
-          center: [coords['x'], coords['y']],
-          zoom: 14
-        });
-      }).catch(function () {
-        console.log("Booo");
-      });
-    }
-  });
->>>>>>> parent of 3e2e084... Revert "latch :key:"
 
   return outputParts.join('/');
 };
 
-<<<<<<< HEAD
 exports.sep = '/';
 exports.delimiter = ':';
-=======
-  function updateSidebar() {
-    console.log('updateSidebar()');
-    var qu_parks = map.queryRenderedFeatures({
-      layers: ['parks-fill']
-    });
-    var qu_centers = map.queryRenderedFeatures({
-      layers: ['rec-center-symbol']
-    });
-    var parks_to_show = getUniqueFeatures(qu_parks, 'ogc_fid');
-    var centers_to_show = getUniqueFeatures(qu_centers, 'name');
-    console.log(centers_to_show);
->>>>>>> parent of 3e2e084... Revert "latch :key:"
 
 exports.dirname = function(path) {
   var result = splitPath(path),
