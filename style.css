@@ -167,9 +167,6 @@ body {
 .summer-fun-center {
   background-color: rgba(255,172,27,0.5);
 }
-.after-school-center {
-  background-color: rgba(255,172,27,0.5);
-}
 
 .legend-item {
   margin-left: 1em;
@@ -192,9 +189,6 @@ body {
   background: rgb(220, 148, 255);
 }
 #sfc {
-  background: rgb(255, 172, 27);
-}
-#asc {
   background: rgb(255, 172, 27);
 }
 
