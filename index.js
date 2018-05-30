@@ -111,7 +111,7 @@ map.on('load', function() {
   })
   map.addSource('rec-centers', {
     type: 'geojson',
-    data: 'https://services2.arcgis.com/qvkbeam7Wirps6zC/arcgis/rest/services/ParksRec/FeatureServer/0/query?where=%22type%22+not+in+%28%27Summer+Fun+Center%27%29&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&resultType=none&distance=0.0&units=esriSRUnit_Meter&returnGeodetic=false&outFields=*&returnGeometry=true&multipatchOption=xyFootprint&maxAllowableOffset=&geometryPrecision=&outSR=4326&returnIdsOnly=false&returnCountOnly=false&returnExtentOnly=false&returnDistinctValues=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&resultOffset=&resultRecordCount=&returnZ=false&returnM=false&quantizationParameters=&sqlFormat=none&f=pgeojson'
+    data: 'https://services2.arcgis.com/qvkbeam7Wirps6zC/arcgis/rest/services/ParksRec/FeatureServer/0/query?where=1%3D1&text=&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&relationParam=&outFields=*&returnGeometry=true&returnTrueCurves=false&maxAllowableOffset=&geometryPrecision=5&outSR=4326&returnIdsOnly=false&returnCountOnly=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&gdbVersion=&returnDistinctValues=false&resultOffset=&resultRecordCount=&f=geojson'
   })
 
   // add parks fill & line layer
@@ -173,7 +173,7 @@ map.on('load', function() {
             property: 'type',
             type: 'categorical',
             stops: [
-                // ['Summer Fun Center', 'rgba(255,172,27,0.9)'],
+                ['Summer Fun Center', 'rgba(255,172,27,0.9)'],
                 ['City Rec Center', 'rgba(0, 153, 204, 0.9)'],
                 ['Partner Rec Center', 'rgba(220,148,255,0.9)']]
         }
