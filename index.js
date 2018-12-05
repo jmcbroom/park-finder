@@ -173,7 +173,7 @@ map.on('load', function() {
             property: 'type',
             type: 'categorical',
             stops: [
-                ['Summer Fun Center', 'rgba(255,172,27,0.9)'],
+                ['After School Center', 'rgba(255,172,27,0.9)'],
                 ['City Rec Center', 'rgba(0, 153, 204, 0.9)'],
                 ['Partner Rec Center', 'rgba(220,148,255,0.9)']]
         }
